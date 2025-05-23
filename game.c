@@ -50,7 +50,7 @@ typedef struct
   vector cops;
   vector robbers;
   size_t remaining_turn;
-  size_t * targets;
+  size_t *targets;
   enum role r;
 } game;
 
@@ -64,7 +64,8 @@ void game_create (game * self)
   vector_create (&(self->robbers));
   self->remaining_turn = 0;
   self->r = COPS;
-  self->targets = NULL;
+  self->targets = self->targets =
+    malloc (self->robbers.size * sizeof (size_t));
 }
 
 void game_destroy (game * self)
@@ -74,7 +75,7 @@ void game_destroy (game * self)
   board_destroy (&(self->b));
   vector_destroy (&(self->cops));
   vector_destroy (&(self->robbers));
-  free(self->targets);
+  free (self->targets);
 }
 
 /*
@@ -305,30 +306,46 @@ unsigned place_robbers (game * self)
 
 }
 
+size_t compute_targets (game * self, size_t index)
+{
+  size_t target_index = 0;
+  size_t max_dist = INT_MAX;
+  for (size_t j = 0; j < self->robbers.size; j++)
+    {
+      bool already_exists = false;
+      size_t dist = board_dist (&self->b, self->cops.positions[index]->index,
+                                self->robbers.positions[j]->index);
+      if (self->robbers.size == self->b.robbers)
+        {
+          for (size_t i = 0; i < self->robbers.size; i++)
+            {
+              if (self->targets[i] != NULL)
+                {
+                  if (self->targets[i] == j)
+                    {
+                      already_exists = true;
+                    }
+                }
+            }
+        }
+      if (dist < max_dist && !already_exists)
+        {
+          target_index = j;
+        }
+    }
+  return target_index;
+}
+
 size_t compute_next_position_cops (game * self, size_t index)
 {
   size_t new_position = self->cops.positions[index];
-  if (self->remaining_turn == self->b.max_turn){
-    size_t target_index = 0;
-    size_t max_dist = 0;
-    for(size_t j = 0; j < self->robbers.size; j++){
-      bool already_exists = false;
-      size_t dist = board_dist(&self->b,self->cops.positions[index]->index,self->robbers.positions[j]->index);
-      for (size_t i = 0; i < self->robbers.size;i++){
-        if (self->targets[i]!=NULL){
-          if (self->targets[i] == j){
-            already_exists = true;
-          }
-        }
-      }
-      if (dist < max_dist && !already_exists){
-        target_index=j;
-      }
+  if (self->remaining_turn == self->b.max_turn)
+    {
+      self->targets[index] = compute_targets (self, index);
     }
-    self->targets[index] = target_index;
-  }
 
-  return board_next(&self->b, self->cops.positions[index]->index, self->robbers.positions[self->targets[index]]->index);
+  return board_next (&self->b, self->cops.positions[index]->index,
+                     self->robbers.positions[self->targets[index]]->index);
 }
 
 
@@ -367,10 +384,11 @@ vector *game_next_position (game * self)
       {
         if (self->r == COPS)
           {
-            self->targets = malloc(self->robbers.size * sizeof(size_t));
+            // printf ("Cible du gendarme %d : Voleur à position %d\n", i,
+            //         self->robbers.positions[self->targets[i]]->index);
             current->positions[i] =
-              self->b.vertices[compute_next_position_cops
-                               (self, current->positions[i]->index)];
+              self->b.vertices[compute_next_position_cops (self, i)];
+
           }
         else
           {
@@ -400,6 +418,7 @@ size_t game_capture_robbers (game * self)
           fprintf (stderr, "Captured robber at position %zu\n",
                    self->robbers.positions[i]->index);
           vector_remove_at (&(self->robbers), i);
+          self->targets[i] = compute_targets (self, i);
           return game_capture_robbers (self);
         }
   return self->robbers.size;

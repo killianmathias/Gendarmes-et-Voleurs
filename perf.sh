@@ -74,6 +74,7 @@ for txt in "${inputs[@]}"; do
       ((current_run++))
       res="$($python_cmd server.py "./$opp" "$game" "$txt" 0 2>&1 | tail -n 2 | head -n 1 | tr -d '\r' | xargs)"
       if [[ "$verbose" == true ]]; then
+      echo "${res,,}";
         if [[ "${res,,}" == *"robbers win!"* ]]; then
           emoji="✅"
         else
@@ -98,7 +99,7 @@ for txt in "${inputs[@]}"; do
           emoji="✅"
         else
           emoji="❌"
-            if [[ "${res,,}" == *"robbert win!"*  ]]; then
+            if [[ "${res,,}" == *"robbers win!"*  ]]; then
                 ((error++))
             fi
         fi
