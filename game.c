@@ -231,52 +231,75 @@ unsigned place_robbers (game * self)
   size_t max = 0;
   size_t diff_max = INT_MAX;
   for (size_t i = 0; i < self->b.size; i++)
+    {
+      size_t score = 0;
+      bool exists = false;
+      size_t diff = 0;
+      for (size_t j = 0; j < self->robbers.size; j++)
         {
-          size_t score = 0;
-          bool exists = false;
-          size_t diff = 0;
-          for (size_t j = 0; j < self->cops.size; j++)
+          if (self->robbers.positions[j] == NULL)
             {
-              if (self->cops.positions[j] == NULL)
-                {
-                  break;
-                }
-              if (self->cops.positions[j]->index == i)
-                {
-                  exists = true;
-                }
-              score +=
-                board_dist (&self->b, i, self->cops.positions[j]->index);
-
-              if (j == 0)
-                {
-                  diff +=
-                    board_dist (&self->b, i, self->cops.positions[j]->index);
-                }
-              else if (j == 1)
-                {
-                  diff -=
-                    board_dist (&self->b, i, self->cops.positions[j]->index);
-                }
+              break;
             }
-          if (diff < 0)
+          if (self->robbers.positions[j]->index == i)
             {
-              diff = -diff;
+              exists = true;
             }
-          score = score + 2 * self->b.vertices[i]->degree;
-          if (score > max && !exists)
+          score +=
+            board_dist (&self->b, i, self->robbers.positions[j]->index);
+          if (j == 0)
             {
-              max = score;
-              index = i;
+              diff +=
+                board_dist (&self->b, i, self->robbers.positions[j]->index);
             }
-          else if (score == max && diff < diff_max)
+          else if (j == 1)
             {
-              max = score;
-              diff_max = diff;
-              index = i;
+              diff -=
+                board_dist (&self->b, i, self->robbers.positions[j]->index);
             }
         }
-    return index;
+      for (size_t j = 0; j < self->cops.size; j++)
+        {
+          if (self->cops.positions[j] == NULL)
+            {
+              break;
+            }
+          if (self->cops.positions[j]->index == i)
+            {
+              exists = true;
+            }
+          score += board_dist (&self->b, i, self->cops.positions[j]->index);
+
+          if (j == 0)
+            {
+              diff +=
+                board_dist (&self->b, i, self->cops.positions[j]->index);
+            }
+          else if (j == 1)
+            {
+              diff -=
+                board_dist (&self->b, i, self->cops.positions[j]->index);
+            }
+        }
+      if (diff < 0)
+        {
+          diff = -diff;
+        }
+      score = score + 3 * self->b.vertices[i]->degree;
+      if (score > max && !exists)
+        {
+          max = score;
+          index = i;
+        }
+      else if (score == max && diff < diff_max)
+        {
+          max = score;
+          diff_max = diff;
+          index = i;
+        }
+    }
+  return index;
+
 }
 
 size_t compute_next_position_cops (game * self, size_t index)
