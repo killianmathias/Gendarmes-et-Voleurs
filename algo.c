@@ -1,0 +1,199 @@
+#include "algo.h"
+#include <stdlib.h>
+#include <limits.h>
+
+void board_create (board * self)
+{
+  self->size = 0;
+  self->vertices = NULL;
+  self->cops = 0;
+  self->robbers = 0;
+  self->max_turn = 0;
+  self->dist = NULL;
+  self->next = NULL;
+}
+
+/*
+ * Auxiliary function to factorize code
+ */
+void board_add_edge_uni (board_vertex * source, board_vertex * destination)
+{
+  source->degree++;
+  source->neighbors =
+    realloc (source->neighbors,
+             source->degree * sizeof (*(source->neighbors)));
+  source->neighbors[source->degree - 1] = destination;
+}
+
+bool board_read_from (board * self, FILE * file)
+{
+  char line[128];
+  if (!fgets (line, sizeof (line), file))
+    return false;
+
+  sscanf (line, "Cops: %zu", &(self->cops));
+  if (!fgets (line, sizeof (line), file))
+    return false;
+  sscanf (line, "Robbers: %zu", &(self->robbers));
+  if (!fgets (line, sizeof (line), file))
+    return false;
+  sscanf (line, "Max turn: %zu", &(self->max_turn));
+  if (!fgets (line, sizeof (line), file))
+    return false;
+  sscanf (line, "Vertices: %zu", &(self->size));
+  self->vertices = calloc (self->size, sizeof (*self->vertices));
+  for (size_t i = 0; i < self->size; i++)
+    {
+      self->vertices[i] = calloc (1, sizeof (**self->vertices));
+      self->vertices[i]->index = i;
+      self->vertices[i]->degree = 0;
+      self->vertices[i]->neighbors = NULL;
+      if (!fgets (line, sizeof (line), file))
+        return false;
+    }
+  size_t edges = 0;
+  if (!fgets (line, sizeof (line), file))
+    return false;
+  sscanf (line, "Edges: %zu", &edges);
+  for (size_t i = 0; i < edges; i++)
+    {
+      size_t v1, v2;
+      if (!fgets (line, sizeof (line), file))
+        return false;
+      sscanf (line, "%zu %zu", &v1, &v2);
+      board_add_edge_uni (self->vertices[v1], self->vertices[v2]);
+      board_add_edge_uni (self->vertices[v2], self->vertices[v1]);
+    }
+  return true;
+}
+
+void board_destroy (board * self)
+{
+  if (!self)
+    {
+      return;
+    }
+
+  for (size_t i = 0; i < self->size; i++)
+    {
+      if (self->vertices[i])
+        {
+          free (self->vertices[i]->neighbors);
+          free (self->vertices[i]);
+        }
+    }
+  free (self->vertices);
+  self->vertices = NULL;
+
+  if (self->dist)
+    {
+      for (size_t u = 0; u < self->size; u++)
+        {
+          free (self->dist[u]);
+
+        }
+      free (self->dist);
+    }
+
+  if (self->next)
+    {
+      for (size_t u = 0; u < self->size; u++)
+        {
+          free (self->next[u]);
+
+        }
+      free (self->next);
+    }
+
+  self->next = NULL;
+  self->dist = NULL;
+  self->size = 0;
+
+}
+
+bool board_is_valid_move (board * self, size_t source, size_t dest)
+{
+  if (self->vertices[dest]->index == self->vertices[source]->index)
+    {
+      return true;
+    }
+  for (size_t i = 0; i < self->vertices[source]->degree; i++)
+    {
+      if (self->vertices[source]->neighbors[i]->index == dest)
+        {
+          return true;
+        }
+    }
+
+  return false;
+}
+
+void board_Floyd_Warshall (board * self)
+{
+  self->dist = malloc (self->size * sizeof (unsigned int *));
+  self->next = malloc (self->size * sizeof (size_t *));
+  for (size_t u = 0; u < self->size; u++)
+    {
+      self->dist[u] = malloc (self->size * sizeof (unsigned int));
+      self->next[u] = malloc (self->size * sizeof (size_t));
+      for (size_t v = 0; v < self->size; v++)
+        {
+          self->dist[u][v] = INT_MAX;
+          self->next[u][v] = INT_MAX;
+        }
+    }
+
+  for (size_t u = 0; u < self->size; u++)
+    {
+      for (size_t v = 0; v < self->size; v++)
+        {
+          if (board_is_valid_move (self, u, v))
+            {
+              self->dist[u][v] = 1;
+              self->next[u][v] = v;
+            }
+        }
+    }
+
+  for (size_t v = 0; v < self->size; v++)
+    {
+      self->dist[v][v] = 0;
+      self->next[v][v] = v;
+    }
+
+  for (size_t u = 0; u < self->size; u++)
+    {
+      for (size_t v = 0; v < self->size; v++)
+        {
+          for (size_t w = 0; w < self->size; w++)
+            {
+              if (self->dist[u][v] > self->dist[u][w] + self->dist[w][v])
+                {
+                  self->dist[u][v] = self->dist[u][w] + self->dist[w][v];
+                  self->next[u][v] = self->next[u][w];
+                }
+            }
+        }
+    }
+
+
+
+}
+
+size_t board_dist (board * self, size_t source, size_t dest)
+{
+  if (self->dist == NULL)
+    {
+      board_Floyd_Warshall (self);
+    }
+  return self->dist[source][dest];
+}
+
+size_t board_next (board * self, size_t source, size_t dest)
+{
+  if (self->dist == NULL)
+    {
+      board_Floyd_Warshall (self);
+    }
+  return self->next[source][dest];
+}
