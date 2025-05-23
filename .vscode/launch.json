@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "/Users/killianmathias/kDrive/L2/S4/ALGO/TP/Gendarmes et Voleurs",
+      "program": "/Users/killianmathias/kDrive/L2/S4/ALGO/TP/Gendarmes et Voleurs/build/Debug/outDebug"
+    }
+  ]
+}

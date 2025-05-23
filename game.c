@@ -134,71 +134,32 @@ size_t place_cops (game * self)
 
 unsigned place_robbers (game * self)
 {
-  //Calculer la somme des distances partant d'un sommet avec chaque sommet déjà occupé par un voleur
+  size_t index = 0;
   size_t max = 0;
-  unsigned index = 0;
-
-  if (self->robbers.positions[0] == NULL)
+  for (size_t i = 0; i < self->b.size; i++)
     {
-      for (size_t i = 0; i < self->b.size; i++)
+      if (max < self->b.vertices[i]->degree)
         {
-          size_t tmp = 0;
           bool exists = false;
-          for (size_t k = 0; k < self->b.cops; k++)
+          for (size_t j = 0; j < self->cops.size; j++)
             {
-              if (i == self->cops.positions[k]->index)
-                {
-                  exists = true;
-                }
-            }
-          for (size_t j = 0; j < self->b.cops; j++)
-            {
-              if (i != self->cops.positions[j]->index)
-                {
-                  tmp +=
-                    board_dist (&self->b, i, self->cops.positions[j]->index);
-                }
-            }
-          if (tmp > max && !exists)
-            {
-              max = tmp;
-              index = i;
-            }
-        }
-    }
-  else
-    {
-      for (size_t i = 0; i < self->b.size; i++)
-        {
-          size_t tmp = 0;
-          bool exists = false;
-          for (size_t k = 0; k < self->b.cops; k++)
-            {
-              if (i == self->cops.positions[k]->index)
-                {
-                  exists = true;
-                }
-            }
-          for (size_t j = 0; j < self->b.robbers; j++)
-            {
-              if (self->robbers.positions[j] == NULL)
+              if (self->cops.positions[j] == NULL)
                 {
                   break;
                 }
-              if (i != self->robbers.positions[j]->index)
+              if (self->cops.positions[j]->index ==
+                  self->b.vertices[i]->index)
                 {
-                  tmp +=
-                    board_dist (&self->b, i,
-                                self->robbers.positions[j]->index);
+                  exists = true;
+                  break;
                 }
             }
-          if (tmp > max && !exists)
+          if (!exists)
             {
-              max = tmp;
+              max = self->b.vertices[i]->degree;
               index = i;
             }
         }
-
     }
   return index;
 }
