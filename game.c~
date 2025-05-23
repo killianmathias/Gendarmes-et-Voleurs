@@ -195,11 +195,23 @@ size_t place_cops (game * self)
                 {
                   diff +=
                     board_dist (&self->b, i, self->cops.positions[j]->index);
+                  printf ("Distance entre sommet %d et sommet %d : %d\n", i,
+                          self->cops.positions[j]->index, diff);
                 }
               else if (j == 1)
                 {
                   diff -=
                     board_dist (&self->b, i, self->cops.positions[j]->index);
+                  printf
+                    ("Distance entre sommet %d et sommet %d : %d -> nouvelle différence = %d\n",
+                     i, self->cops.positions[j]->index, board_dist (&self->b,
+                                                                    i,
+                                                                    self->
+                                                                    cops.
+                                                                    positions
+                                                                    [j]->
+                                                                    index),
+                     diff);
                 }
             }
           if (diff < 0)
@@ -207,6 +219,7 @@ size_t place_cops (game * self)
               diff = -diff;
             }
           score = score + 2 * self->b.vertices[i]->degree;
+          printf ("SOMMET %d : score -> %d\n", i, score);
           if (score > max && !exists)
             {
               max = score;
