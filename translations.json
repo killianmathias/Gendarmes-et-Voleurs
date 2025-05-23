@@ -1,0 +1,10 @@
+{
+    "en": {
+        "title": "Gendarmes and thieves",
+        "description": "Algorithmic project which consists in developing the behavior of gendarmes and thieves in a graph"
+    },
+    "fr": {
+        "title": "Gendarmes et Voleurs",
+        "description": "Projet d'algorithmique qui consiste à développer le comportement des gendarmes et des voleurs dans un graphe"
+    }
+}
