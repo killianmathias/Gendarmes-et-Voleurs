@@ -117,6 +117,8 @@ class Game:
         self.screen = Screen()
         self.screen.tracer(0)
         self.screen.setworldcoordinates(-1.1, -1.1, 1.1, 1.1)
+        self.screen.addshape("assets/cop.gif")
+        self.screen.addshape("assets/robber.gif")
         # Print edges
         edges = Turtle()
         edges.hideturtle()
@@ -189,11 +191,15 @@ class Game:
                     t = Turtle()
                     t.penup()
                     if self.cops_turn:
-                        t.color("orange")
-                        t.shape("triangle")
+                        t.shape("assets/cop.gif")
                     else:
-                        t.color("red")
-                        t.shape("circle")
+                        t.shape("assets/robber.gif")
+                    # if self.cops_turn:
+                    #     t.color("orange")
+                    #     t.shape("triangle")
+                    # else:
+                    #     t.color("red")
+                    #     t.shape("circle")
                     t.width(5)
                     t.setposition(self.layout[p])
                     self.pos.turtles.append(t)
