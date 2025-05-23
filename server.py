@@ -151,8 +151,6 @@ class Game:
         self.counter.setposition(-1, 1)
         # Prepare cops
         self.screen.tracer(1)
-        self.screen.addshape("assets/cop.gif")
-        self.screen.addshape("assets/robber.gif")
 
     # Start iteration
     def print_start_iteration(self):
@@ -192,15 +190,11 @@ class Game:
                     t = Turtle()
                     t.penup()
                     if self.cops_turn:
-                        t.shape("assets/cop.gif")
+                        t.color("orange")
+                        t.shape("triangle")
                     else:
-                        t.shape("assets/robber.gif")
-                    # if self.cops_turn:
-                    #     t.color("orange")
-                    #     t.shape("triangle")
-                    # else:
-                    #     t.color("red")
-                    #     t.shape("circle")
+                        t.color("red")
+                        t.shape("circle")
                     t.width(5)
                     t.setposition(self.layout[p])
                     self.pos.turtles.append(t)
