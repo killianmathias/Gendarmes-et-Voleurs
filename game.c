@@ -51,7 +51,7 @@ typedef struct
   vector robbers;
   size_t remaining_turn;
   size_t *targets;
-  size_t **zone;
+  bool **zone;
   enum role r;
 } game;
 
@@ -114,27 +114,34 @@ void compute_zones (game * self)
 {
   if (self->cops.size != 0)
     {
-
-
       size_t number_of_vertices_per_zone = self->b.size / self->cops.size;
       size_t rest = self->b.size % self->b.cops;
+      
+      for (size_t i =0; i< self->cops.size; i++){
+        self->zone[i] = malloc(self->b.size * sizeof(bool));
+      }
+      
+      for (size_t j = 0; j <self->b.size;j++){
+        size_t index_cops=0;
+        size_t min = INT_MAX;
+        for (size_t i = 0; i < self->b.cops; i++)
+          {
 
-      for (size_t i = 0; i < self->b.cops; i++)
-        {
-          self->zone[i] = malloc (2 * sizeof (size_t));
-          self->zone[i][0] = i * number_of_vertices_per_zone;
-          self->zone[i][1] =
-            i * number_of_vertices_per_zone + number_of_vertices_per_zone - 1;
-        }
-
-      self->zone[self->b.cops - 1][1] += rest;
+            self->zone[i][j]=false;
+            if (board_dist(&self->b, self->cops.positions[i]->index,j) < min){
+              min = board_dist(&self->b, self->cops.positions[i]->index,j);
+              index_cops = i;
+            }
+          }
+        self->zone[index_cops][j]=true;
+      }
     }
 }
 
 
 bool is_in_gamezone (game * self, size_t cops, size_t index)
 {
-  return self->zone[cops][0] < index && self->zone[cops][1] > index;
+  return self->zone[cops][index];
 }
 
 
@@ -248,21 +255,18 @@ size_t place_cops (game * self)
               diff = -diff;
             }
           score = score + 2 * self->b.vertices[i]->degree;
-          if (is_in_gamezone (self, cops, i))
+          if (score > max && !exists)
             {
-              if (score > max && !exists)
-                {
-                  max = score;
-                  index = i;
-                }
-              else if (score == max && diff < diff_max)
-                {
-                  max = score;
-                  diff_max = diff;
-                  index = i;
-                }
+              max = score;
+              index = i;
             }
-        }
+          else if (score == max && diff < diff_max)
+            {
+              max = score;
+              diff_max = diff;
+              index = i;
+            }
+          }
     }
   return index;
 }
@@ -419,7 +423,7 @@ vector *game_next_position (game * self)
 // Placer le premier gendarme sur la première case puis le second le plus loin possible du 1er, puis le 3e le plus loin possible du 2e sur une case non utilisée, etc 
 {
   vector *current = self->r == COPS ? &(self->cops) : &(self->robbers);
-  compute_zones (self);
+
   if (current->positions == NULL)
     {
       current->positions =
@@ -434,6 +438,7 @@ vector *game_next_position (game * self)
           else
             current->positions[i] = self->b.vertices[place_robbers (self)];
         }
+        compute_zones(self);
     }
   else
     // Compute next positions
