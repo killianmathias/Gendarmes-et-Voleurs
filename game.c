@@ -384,13 +384,11 @@ size_t compute_next_position_cops (game * self, size_t index)
       size_t neighbors_count = robber_vertex->degree;
       size_t neighbors[neighbors_count];
 
-      // Récupérer les indices des voisins du voleur
       for (size_t i = 0; i < neighbors_count; i++)
         {
           neighbors[i] = robber_vertex->neighbors[i]->index;
         }
 
-      // Vérifier quels voisins sont déjà occupés par des gendarmes
       bool occupied_neighbors[neighbors_count];
       for (size_t i = 0; i < neighbors_count; i++)
         {
@@ -406,15 +404,13 @@ size_t compute_next_position_cops (game * self, size_t index)
         }
 
       board_vertex *current_vertex = self->b.vertices[index];
-      size_t best_position = index;     // Reste sur place par défaut
+      size_t best_position = index;
       int best_score = INT_MAX;
 
-      // On regarde chaque voisin du gendarme actuel
       for (size_t i = 0; i < current_vertex->degree; i++)
         {
           size_t candidate = current_vertex->neighbors[i]->index;
 
-          // Vérifier si ce voisin est déjà occupé par un autre gendarme
           bool occupied = false;
           for (size_t j = 0; j < self->cops.size; j++)
             {
@@ -426,10 +422,9 @@ size_t compute_next_position_cops (game * self, size_t index)
             }
           if (occupied)
             {
-              continue;         // On saute ce voisin s'il est occupé
+              continue; 
             }
 
-          // Chercher la distance minimale entre ce candidat et un voisin libre du voleur
           int min_dist_to_free_neighbor = INT_MAX;
           for (size_t v = 0; v < neighbors_count; v++)
             {
@@ -443,14 +438,12 @@ size_t compute_next_position_cops (game * self, size_t index)
                 }
             }
 
-          // Si tous les voisins sont occupés, on se rapproche directement du voleur
           if (min_dist_to_free_neighbor == INT_MAX)
             {
               min_dist_to_free_neighbor =
                 board_dist (&self->b, candidate, robber_pos);
             }
 
-          // Choisir la position qui minimise cette distance
           if (min_dist_to_free_neighbor < best_score)
             {
               best_score = min_dist_to_free_neighbor;
@@ -470,8 +463,6 @@ unsigned compute_next_position_robbers (game * self, size_t index)
 
   board_vertex *current = self->b.vertices[index];
 
-  // On considère aussi rester sur place comme une option possible
-  // Donc on ajoute le point actuel en plus des voisins
   size_t candidates_count = current->degree + 1;
   board_vertex *candidates[candidates_count];
 
@@ -499,23 +490,17 @@ unsigned compute_next_position_robbers (game * self, size_t index)
           total_dist_to_cops += dist;
         }
 
-      // Score basé principalement sur la distance minimale, 
-      // mais aussi la distance totale et la connectivité (plus de voisins = plus de mouvements futurs)
       int score = min_dist_to_cop * 12 + total_dist_to_cops;
 
-      // Bonus pour les positions avec peu de voisins (cachettes)
-      if (pos->degree <= 2)
+      if (pos->degree > 2)
         score += 10;
 
-      // Bonus pour les positions bien connectées (éviter de se coincer)
       if (pos->degree >= 4)
         score += 5;
 
-      // Bonus à rester sur place s'il est sûr (plus sûr que bouger)
       if (pos->index == index)
         score += 8;
 
-      // Petite pénalité si trop proche d’un gendarme (moins de 2 cases)
       if (min_dist_to_cop < 2)
         score -= 25;
 
