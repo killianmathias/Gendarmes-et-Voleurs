@@ -9,7 +9,7 @@ start_time=$(date +%s)
 ############################
 # Paramètres faciles à éditer
 ############################
-opponents=(bin/mid)              # autres binaires
+opponents=(bin/low bin/mid bin/high)              # autres binaires
 runs=3                          # nombre d’itérations
 game=./game                      # ton programme
 python_cmd=python3               # ou python
@@ -80,7 +80,7 @@ for txt in "${inputs[@]}"; do
 
       if [[ "${output,,}" == *"disqualified"* || "${output,,}" == *"timeout"* ]]; then
         ((error++))
-        [[ $verbose == true ]] && echo "[ERREUR] $python_cmd server.py ./game $opp $txt 0"
+        [[ $verbose == true ]] && echo "[ERREUR] $python_cmd server.py $opp ./game $txt 0"
       fi
 
       if [[ "$verbose" == true ]]; then
