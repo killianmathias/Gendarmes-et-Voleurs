@@ -348,9 +348,8 @@ unsigned compute_next_position_robbers (game * self, size_t index)
         {
           if (self->cops.positions[j] != NULL)
             {
-              int dist =
-                board_dist (&self->b, neighbor,
-                            self->cops.positions[j]->index);
+              int dist = board_dist (&self->b, neighbor,
+                                     self->cops.positions[j]->index);
               if (dist < min_dist)
                 min_dist = dist;
             }
