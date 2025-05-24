@@ -300,6 +300,7 @@ unsigned place_robbers (game * self)
   return index;
 
 }
+
 size_t compute_next_position_cops (game * self, size_t index)
 {
   int best_score = INT_MIN;
@@ -316,8 +317,11 @@ size_t compute_next_position_cops (game * self, size_t index)
         {
           if (self->robbers.positions[j] == NULL)
             continue;
-          int current_dist = board_dist (&self->b, index, self->robbers.positions[j]->index);
-          int new_dist = board_dist (&self->b, neighbor->index, self->robbers.positions[j]->index);
+          int current_dist =
+            board_dist (&self->b, index, self->robbers.positions[j]->index);
+          int new_dist =
+            board_dist (&self->b, neighbor->index,
+                        self->robbers.positions[j]->index);
           score += (current_dist - new_dist) * 10;
 
           // Bonus si on se rapproche d’un voleur déjà à courte distance
@@ -357,7 +361,9 @@ unsigned compute_next_position_robbers (game * self, size_t index)
         {
           if (self->cops.positions[j] == NULL)
             continue;
-          int dist = board_dist (&self->b, neighbor->index, self->cops.positions[j]->index);
+          int dist =
+            board_dist (&self->b, neighbor->index,
+                        self->cops.positions[j]->index);
           if (dist < min_dist)
             min_dist = dist;
           total_dist += dist;

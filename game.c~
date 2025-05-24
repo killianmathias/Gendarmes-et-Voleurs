@@ -300,27 +300,33 @@ unsigned place_robbers (game * self)
   return index;
 
 }
-
 size_t compute_next_position_cops (game * self, size_t index)
 {
   int best_score = INT_MIN;
   size_t next_index = index;
 
-  for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
+  board_vertex *current = self->b.vertices[index];
+
+  for (size_t i = 0; i < current->degree; i++)
     {
-      board_vertex *neighbor = self->b.vertices[index]->neighbors[i];
+      board_vertex *neighbor = current->neighbors[i];
       int score = 0;
 
       for (size_t j = 0; j < self->robbers.size; j++)
         {
           if (self->robbers.positions[j] == NULL)
             continue;
-          int dist = board_dist (&self->b, neighbor->index,
-                                 self->robbers.positions[j]->index);
-          int cop_dist =
-            board_dist (&self->b, index, self->robbers.positions[j]->index);
-          score += (cop_dist - dist);
+          int current_dist = board_dist (&self->b, index, self->robbers.positions[j]->index);
+          int new_dist = board_dist (&self->b, neighbor->index, self->robbers.positions[j]->index);
+          score += (current_dist - new_dist) * 10;
+
+          // Bonus si on se rapproche d’un voleur déjà à courte distance
+          if (new_dist <= 2)
+            score += 50;
         }
+
+      // Bonus si la case a beaucoup de voisins (meilleure mobilité future)
+      score += neighbor->degree * 2;
 
       if (score > best_score)
         {
@@ -338,25 +344,31 @@ unsigned compute_next_position_robbers (game * self, size_t index)
   unsigned best_index = index;
   int best_score = INT_MIN;
 
-  for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
-    {
-      board_vertex *neighbor = self->b.vertices[index]->neighbors[i];
-      int min_dist = INT_MAX;
-      int score = 0;
+  board_vertex *current = self->b.vertices[index];
 
-      // distance au gendarme le plus proche
+  for (size_t i = 0; i < current->degree; i++)
+    {
+      board_vertex *neighbor = current->neighbors[i];
+      int score = 0;
+      int min_dist = INT_MAX;
+      int total_dist = 0;
+
       for (size_t j = 0; j < self->cops.size; j++)
         {
           if (self->cops.positions[j] == NULL)
             continue;
-          int dist = board_dist (&self->b, neighbor->index,
-                                 self->cops.positions[j]->index);
+          int dist = board_dist (&self->b, neighbor->index, self->cops.positions[j]->index);
           if (dist < min_dist)
             min_dist = dist;
+          total_dist += dist;
         }
 
-      score += min_dist * 10;   // plus on est loin, mieux c’est
-      score += neighbor->degree;        // plus il y a de sorties, mieux c’est
+      // Maximiser la distance minimum ET moyenne
+      score += min_dist * 10 + total_dist;
+
+      // Bonus si le sommet a peu de voisins = potentiellement une cachette
+      if (neighbor->degree <= 2)
+        score += 15;
 
       if (score > best_score)
         {
