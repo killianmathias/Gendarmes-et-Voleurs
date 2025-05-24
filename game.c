@@ -350,8 +350,8 @@ size_t compute_next_position_cops (game * self, size_t index)
 
           // Calculer la distance entre ce voisin et le voleur (on prend le premier voleur)
           int distance_to_robber = board_dist (&self->b, candidate,
-                                               self->robbers.
-                                               positions[0]->index);
+                                               self->robbers.positions[0]->
+                                               index);
 
           // Vérifier que ce voisin n'est pas déjà occupé par un autre gendarme
           bool occupied = false;
@@ -422,7 +422,7 @@ size_t compute_next_position_cops (game * self, size_t index)
             }
           if (occupied)
             {
-              continue; 
+              continue;
             }
 
           int min_dist_to_free_neighbor = INT_MAX;
