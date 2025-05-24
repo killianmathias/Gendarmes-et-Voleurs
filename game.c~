@@ -336,34 +336,66 @@ unsigned place_robbers (game * self)
 
 size_t compute_next_position_cops (game * self, size_t index)
 {
-  size_t score = INT_MAX;
-  size_t next_index = index;
-  for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
+  if (self->robbers.size != 1)
     {
-      size_t new_score = 0;
-      new_score =
-        board_dist (&self->b,
-                    self->b.vertices[index]->neighbors[i]->index,
-                    self->robbers.positions[0]->index);
-
-
-      bool already_used = false;
-      for (size_t j = 0; j < self->cops.size; j++)
+      size_t score = INT_MAX;
+      size_t next_index = index;
+      for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
         {
-          if (self->b.vertices[index]->neighbors[i]->index ==
-              self->cops.positions[j])
+          size_t new_score = 0;
+          new_score =
+            board_dist (&self->b,
+                        self->b.vertices[index]->neighbors[i]->index,
+                        self->robbers.positions[0]->index);
+
+
+          bool already_used = false;
+          for (size_t j = 0; j < self->cops.size; j++)
             {
-              already_used == true;
+              if (self->b.vertices[index]->neighbors[i]->index ==
+                  self->cops.positions[j])
+                {
+                  already_used = true;
+                }
+            }
+          if (score > new_score && !already_used)
+            {
+              score = new_score;
+              next_index = self->b.vertices[index]->neighbors[i]->index;
+            }
+          ;
+        }
+      return next_index;
+    }
+  else
+    {
+      size_t score = INT_MAX;
+      size_t next_index = index;
+      for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
+        {
+          size_t candidate = self->b.vertices[index]->neighbors[i]->index;
+          size_t new_score =
+            board_dist (&self->b, candidate,
+                        self->robbers.positions[0]->index);
+
+          bool already_used = false;
+          for (size_t j = 0; j < self->cops.size; j++)
+            {
+              if (candidate == self->cops.positions[j])
+                {
+                  already_used = true;  // <-- correction de '==' en '='
+                  break;
+                }
+            }
+
+          if (!already_used && new_score < score)
+            {
+              score = new_score;
+              next_index = candidate;
             }
         }
-      if (score > new_score && !already_used)
-        {
-          score = new_score;
-          next_index = self->b.vertices[index]->neighbors[i]->index;
-        }
-      ;
+      return next_index;
     }
-  return next_index;
 }
 
 
