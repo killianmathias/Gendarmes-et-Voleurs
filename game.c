@@ -301,37 +301,51 @@ unsigned place_robbers (game * self)
 
 }
 
-size_t compute_next_position_cops(game *self, size_t index) {
-    int meilleur_score = 0;
-    size_t prochaine_case = index;
+// size_t compute_next_position_cops(game *self, size_t index) {
+//     int meilleur_score = 0;
+//     size_t prochaine_case = index;
 
-    board_vertex *actuelle = self->b.vertices[index];
-    for (size_t i = 0; i < actuelle->degree; i++) {
-        board_vertex *voisine = actuelle->neighbors[i];
-        int score = 0;
+//     board_vertex *actuelle = self->b.vertices[index];
+//     for (size_t i = 0; i < actuelle->degree; i++) {
+//         board_vertex *voisine = actuelle->neighbors[i];
+//         int score = 0;
 
-        for (size_t j = 0; j < self->robbers.size; j++) {
-            if (self->robbers.positions[j] == NULL)
-                continue;
+//         for (size_t j = 0; j < self->robbers.size; j++) {
+//             if (self->robbers.positions[j] == NULL)
+//                 continue;
 
-            int dist_actuelle = board_dist(&self->b, index, self->robbers.positions[j]->index);
-            int dist_voisine = board_dist(&self->b, voisine->index, self->robbers.positions[j]->index);
+//             int dist_actuelle = board_dist(&self->b, index, self->robbers.positions[j]->index);
+//             int dist_voisine = board_dist(&self->b, voisine->index, self->robbers.positions[j]->index);
 
-            score += (dist_actuelle - dist_voisine) * 10;
+//             score += (dist_actuelle - dist_voisine) * 10;
 
-            if (dist_voisine <= 2)
-                score += 50;
-        }
+//             if (dist_voisine <= 2)
+//                 score += 50;
+//         }
 
-        score += voisine->degree * 2;
+//         score += voisine->degree * 2;
 
-        if (score > meilleur_score) {
-            meilleur_score = score;
-            prochaine_case = voisine->index;
-        }
+//         if (score > meilleur_score) {
+//             meilleur_score = score;
+//             prochaine_case = voisine->index;
+//         }
+//     }
+
+//     return prochaine_case;
+// }
+
+size_t compute_next_position_cops(game * self, size_t index){
+  size_t score = 0;
+  size_t next_index = index;
+  for (size_t i = 0; i< self->b.vertices[index];i++){
+    int new_score = board_dist(&self->b, self->b.vertices[index]->neighbors[i]->index, index) + 2* self->b.vertices[index]->neighbors[i]->degree;
+    if (score < new_score){
+      score = new_score;
+      next_index= self->b.vertices[index]->neighbors[i]->index;
     }
-
-    return prochaine_case;
+    ;
+  }
+  return next_index;
 }
 
 
