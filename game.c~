@@ -51,6 +51,7 @@ typedef struct
   vector robbers;
   size_t remaining_turn;
   size_t *targets;
+  size_t **zone;
   enum role r;
 } game;
 
@@ -64,8 +65,8 @@ void game_create (game * self)
   vector_create (&(self->robbers));
   self->remaining_turn = 0;
   self->r = COPS;
-  self->targets = self->targets =
-    malloc (self->robbers.size * sizeof (size_t));
+  self->targets = malloc (self->robbers.size * sizeof (size_t));
+  self->zone = malloc (self->cops.size * sizeof (*(self->zone)));
 }
 
 void game_destroy (game * self)
@@ -76,6 +77,11 @@ void game_destroy (game * self)
   vector_destroy (&(self->cops));
   vector_destroy (&(self->robbers));
   free (self->targets);
+  for (size_t i = 0; i < self->b.cops; i++)
+    {
+      free (self->zone[i]);
+    }
+  free (self->zone);
 }
 
 /*
@@ -336,16 +342,40 @@ size_t compute_targets (game * self, size_t index)
   return target_index;
 }
 
+void compute_zones (game * self)
+{
+  size_t number_of_vertices_per_zone = self->b.size / self->b.cops;
+  for (size_t i = 0; i < self->b.cops; i++)
+    {
+      self->zone[i] = malloc (2 * sizeof (size_t));
+      self->zone[i][0] = i * number_of_vertices_per_zone;
+      self->zone[i][1] =
+        i * number_of_vertices_per_zone + number_of_vertices_per_zone - 1;
+    }
+}
+
 size_t compute_next_position_cops (game * self, size_t index)
 {
+  if (index==0){
+    compute_zones (self);
+  }
   size_t new_position = self->cops.positions[index];
   if (self->remaining_turn == self->b.max_turn)
     {
       self->targets[index] = compute_targets (self, index);
     }
+  
 
-  return board_next (&self->b, self->cops.positions[index]->index,
-                     self->robbers.positions[self->targets[index]]->index);
+  size_t next_position =
+    board_next (&self->b, self->cops.positions[index]->index,
+                self->robbers.positions[self->targets[index]]->index);
+
+  if (next_position >= self->zone[index][0]
+      && next_position <= self->zone[index][1])
+    {
+      return next_position;
+    }
+  return self->cops.positions[index]->index;
 }
 
 
