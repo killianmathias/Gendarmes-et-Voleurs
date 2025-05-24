@@ -301,89 +301,108 @@ unsigned place_robbers (game * self)
 
 }
 
-int evaluation(game *self, size_t cop_index) {
-    // Fonction qui donne un score à une situation
-    // Plus les voleurs sont proches, meilleur c’est
-    int score = 0;
-    board_vertex *cop = self->b.vertices[cop_index];
+int evaluation (game * self, size_t cop_index)
+{
+  // Fonction qui donne un score à une situation
+  // Plus les voleurs sont proches, meilleur c’est
+  int score = 0;
+  board_vertex *cop = self->b.vertices[cop_index];
 
-    for (size_t i = 0; i < self->robbers.size; i++) {
-        if (self->robbers.positions[i] == NULL) continue;
+  for (size_t i = 0; i < self->robbers.size; i++)
+    {
+      if (self->robbers.positions[i] == NULL)
+        continue;
 
-        int dist = board_dist(&self->b, cop_index, self->robbers.positions[i]->index);
-        if (dist == 0) {
-            score += 1000; // Attrapé !
-        } else {
-            score += (10 - dist); // Plus proche = meilleur
+      int dist =
+        board_dist (&self->b, cop_index, self->robbers.positions[i]->index);
+      if (dist == 0)
+        {
+          score += 1000;        // Attrapé !
+        }
+      else
+        {
+          score += (10 - dist); // Plus proche = meilleur
         }
     }
 
-    return score;
+  return score;
 }
 
-int minimax(game *self, size_t cop_index, int depth, int alpha, int beta, int maximizingPlayer) {
-    if (depth == 0)
-        return evaluation(self, cop_index);
+int minimax (game * self, size_t cop_index, int depth, int alpha, int beta,
+             int maximizingPlayer)
+{
+  if (depth == 0)
+    return evaluation (self, cop_index);
 
-    board_vertex *cop = self->b.vertices[cop_index];
-    int bestValue;
+  board_vertex *cop = self->b.vertices[cop_index];
+  int bestValue;
 
-    if (maximizingPlayer) {
-        bestValue = INT_MIN;
-        for (size_t i = 0; i < cop->degree; i++) {
-            size_t next = cop->neighbors[i]->index;
+  if (maximizingPlayer)
+    {
+      bestValue = INT_MIN;
+      for (size_t i = 0; i < cop->degree; i++)
+        {
+          size_t next = cop->neighbors[i]->index;
 
-            // Appel récursif : voleurs vont bouger ensuite
-            int val = minimax(self, next, depth - 1, alpha, beta, 0);
-            bestValue = val > bestValue ? val : bestValue;
-            alpha = alpha > val ? alpha : val;
-            if (beta <= alpha)
-                break; // Coupe
+          // Appel récursif : voleurs vont bouger ensuite
+          int val = minimax (self, next, depth - 1, alpha, beta, 0);
+          bestValue = val > bestValue ? val : bestValue;
+          alpha = alpha > val ? alpha : val;
+          if (beta <= alpha)
+            break;              // Coupe
         }
-    } else {
-        bestValue = INT_MAX;
-        for (size_t i = 0; i < self->robbers.size; i++) {
-            board_vertex *robber = self->robbers.positions[i];
-            if (robber == NULL) continue;
+    }
+  else
+    {
+      bestValue = INT_MAX;
+      for (size_t i = 0; i < self->robbers.size; i++)
+        {
+          board_vertex *robber = self->robbers.positions[i];
+          if (robber == NULL)
+            continue;
 
-            for (size_t j = 0; j < robber->degree; j++) {
-                size_t prev = self->robbers.positions[i]->index;
-                size_t new_pos = robber->neighbors[j]->index;
+          for (size_t j = 0; j < robber->degree; j++)
+            {
+              size_t prev = self->robbers.positions[i]->index;
+              size_t new_pos = robber->neighbors[j]->index;
 
-                // On simule un déplacement du voleur
-                self->robbers.positions[i] = self->b.vertices[new_pos];
-                int val = minimax(self, cop_index, depth - 1, alpha, beta, 1);
-                self->robbers.positions[i] = self->b.vertices[prev]; // On annule le déplacement
+              // On simule un déplacement du voleur
+              self->robbers.positions[i] = self->b.vertices[new_pos];
+              int val = minimax (self, cop_index, depth - 1, alpha, beta, 1);
+              self->robbers.positions[i] = self->b.vertices[prev];      // On annule le déplacement
 
-                bestValue = val < bestValue ? val : bestValue;
-                beta = beta < val ? beta : val;
-                if (beta <= alpha)
-                    break;
+              bestValue = val < bestValue ? val : bestValue;
+              beta = beta < val ? beta : val;
+              if (beta <= alpha)
+                break;
             }
         }
     }
 
-    return bestValue;
+  return bestValue;
 }
 
-size_t compute_next_position_cops(game *self, size_t index) {
-    board_vertex *current = self->b.vertices[index];
-    int best_score = INT_MIN;
-    size_t best_move = index;
+size_t compute_next_position_cops (game * self, size_t index)
+{
+  board_vertex *current = self->b.vertices[index];
+  int best_score = INT_MIN;
+  size_t best_move = index;
 
-    for (size_t i = 0; i < current->degree; i++) {
-        size_t next = current->neighbors[i]->index;
+  for (size_t i = 0; i < current->degree; i++)
+    {
+      size_t next = current->neighbors[i]->index;
 
-        // Applique minimax sur ce déplacement
-        int score = minimax(self, next, 2, INT_MIN, INT_MAX, 0);
+      // Applique minimax sur ce déplacement
+      int score = minimax (self, next, 3, INT_MIN, INT_MAX, 0);
 
-        if (score > best_score) {
-            best_score = score;
-            best_move = next;
+      if (score > best_score)
+        {
+          best_score = score;
+          best_move = next;
         }
     }
 
-    return best_move;
+  return best_move;
 }
 
 
@@ -405,9 +424,8 @@ unsigned compute_next_position_robbers (game * self, size_t index)
         {
           if (self->cops.positions[j] == NULL)
             continue;
-          int dist =
-            board_dist (&self->b, neighbor->index,
-                        self->cops.positions[j]->index);
+          int dist = board_dist (&self->b, neighbor->index,
+                                 self->cops.positions[j]->index);
           if (dist < min_dist)
             min_dist = dist;
           total_dist += dist;
