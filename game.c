@@ -404,23 +404,39 @@ size_t compute_targets (game * self, size_t index)
 }
 
 
-size_t compute_next_position_cops(game * self, size_t index) {
-    if (self->remaining_turn == self->b.max_turn) {
-        self->targets[index] = compute_targets(self, index);
+size_t compute_next_position_cops (game * self, size_t index)
+{
+  if (index == 0)
+    {
+
+    }
+  size_t new_position = self->cops.positions[index];
+  if (self->remaining_turn == self->b.max_turn)
+    {
+      self->targets[index] = compute_targets (self, index);
     }
 
-    size_t current_pos = self->cops.positions[index]->index;
-    size_t target_pos = self->robbers.positions[self->targets[index]]->index;
-    size_t next_pos = board_next(&self->b, current_pos, target_pos);
 
-    // Si le mouvement reste dans la zone, on y va
-    if (is_in_gamezone(self, index, next_pos)) {
-        return next_pos;
+  size_t next_position =
+    board_next (&self->b, self->cops.positions[index]->index,
+                self->robbers.positions[self->targets[index]]->index);
+  if (self->cops.positions[index]->degree == 0)
+    {
+      return self->cops.positions[index]->index;
     }
 
-    // Sinon, recalculer un autre voleur dans la zone
-    self->targets[index] = compute_targets(self, index);
-    return board_next(&self->b, current_pos, self->robbers.positions[self->targets[index]]->index);
+  if (is_in_gamezone (self, index, next_position))
+    {
+      return next_position;
+    }
+  else
+    {
+      compute_targets (self, index);
+      next_position =
+        board_next (&self->b, self->cops.positions[index]->index,
+                    self->robbers.positions[self->targets[index]]->index);
+    }
+  return next_position;
 }
 
 
@@ -431,7 +447,6 @@ unsigned compute_next_position_robbers(game * self, size_t index) {
     int max_min_dist = -1;
 
     for (size_t i = 0; i < v->degree; i++) {
-
         size_t neighbor = v->neighbors[i];
         int min_dist = INT_MAX;
 
