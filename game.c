@@ -67,6 +67,7 @@ void game_create (game * self)
   self->r = COPS;
   self->targets = malloc (self->robbers.size * sizeof (size_t));
   self->zone = malloc (self->cops.size * sizeof (*(self->zone)));
+  compute_zones (self);
 }
 
 void game_destroy (game * self)
@@ -240,6 +241,7 @@ unsigned place_robbers (game * self)
   size_t max_degree = 0;
   size_t max = 0;
   size_t diff_max = INT_MAX;
+  size_t cops = 0;
   for (size_t i = 0; i < self->b.size; i++)
     {
       size_t score = 0;
@@ -250,6 +252,7 @@ unsigned place_robbers (game * self)
           if (self->robbers.positions[j] == NULL)
             {
               break;
+              cops = j;
             }
           if (self->robbers.positions[j]->index == i)
             {
@@ -296,16 +299,18 @@ unsigned place_robbers (game * self)
           diff = -diff;
         }
       score = score + 3 * self->b.vertices[i]->degree;
-      if (score > max && !exists)
-        {
-          max = score;
-          index = i;
-        }
-      else if (score == max && diff < diff_max)
-        {
-          max = score;
-          diff_max = diff;
-          index = i;
+      if (is_in_zone(self,cops,index)){
+        if (score > max && !exists)
+          {
+            max = score;
+            index = i;
+          }
+        else if (score == max && diff < diff_max)
+          {
+            max = score;
+            diff_max = diff;
+            index = i;
+          }
         }
     }
   return index;
@@ -345,6 +350,7 @@ size_t compute_targets (game * self, size_t index)
 void compute_zones (game * self)
 {
   size_t number_of_vertices_per_zone = self->b.size / self->b.cops;
+  size_t rest = self->b.size % self->b.cops;
   for (size_t i = 0; i < self->b.cops; i++)
     {
       self->zone[i] = malloc (2 * sizeof (size_t));
@@ -352,13 +358,21 @@ void compute_zones (game * self)
       self->zone[i][1] =
         i * number_of_vertices_per_zone + number_of_vertices_per_zone - 1;
     }
+    self->zone[2][1] += rest;
+}
+
+bool is_in_zone(game* self,size_t cops,size_t index){
+  if (self->zone[cops][0]< index && self->zone[cops][1]>index){
+    return true;
+  }
+  return false;
 }
 
 size_t compute_next_position_cops (game * self, size_t index)
 {
   if (index == 0)
     {
-      compute_zones (self);
+      
     }
   size_t new_position = self->cops.positions[index];
   if (self->remaining_turn == self->b.max_turn)
