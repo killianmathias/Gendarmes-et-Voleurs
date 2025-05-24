@@ -301,89 +301,136 @@ unsigned place_robbers (game * self)
 
 }
 
-size_t compute_next_position_cops (game * self, size_t index)
-{
-  int best_score = INT_MIN;
-  size_t next_index = index;
+int eval_game_state(game *g) {
+    int score = 0;
 
-  board_vertex *current = self->b.vertices[index];
-
-  for (size_t i = 0; i < current->degree; i++)
-    {
-      board_vertex *neighbor = current->neighbors[i];
-      int score = 0;
-
-      for (size_t j = 0; j < self->robbers.size; j++)
-        {
-          if (self->robbers.positions[j] == NULL)
-            continue;
-          int current_dist =
-            board_dist (&self->b, index, self->robbers.positions[j]->index);
-          int new_dist =
-            board_dist (&self->b, neighbor->index,
-                        self->robbers.positions[j]->index);
-          score += (current_dist - new_dist) * 10;
-
-          // Bonus si on se rapproche d’un voleur déjà à courte distance
-          if (new_dist <= 2)
-            score += 50;
-        }
-
-      // Bonus si la case a beaucoup de voisins (meilleure mobilité future)
-      score += neighbor->degree * 2;
-
-      if (score > best_score)
-        {
-          best_score = score;
-          next_index = neighbor->index;
+    for (size_t i = 0; i < g->robbers.size; i++) {
+        for (size_t j = 0; j < g->cops.size; j++) {
+            if (g->robbers.positions[i] != NULL && g->cops.positions[j] != NULL) {
+                score += board_dist(&g->b, g->robbers.positions[i]->index,
+                                          g->cops.positions[j]->index);
+            }
         }
     }
 
-  return next_index;
+    return score; // Plus c'est loin des flics, mieux c'est
+}
+
+int minimax(game *g, size_t robber_index, int depth, int alpha, int beta, int maximizingPlayer) {
+    if (depth == 0 || g->robbers.positions[robber_index] == NULL) {
+        return eval_game_state(g);
+    }
+
+    board_vertex *current = g->robbers.positions[robber_index];
+    int bestScore;
+
+    if (maximizingPlayer) {
+        bestScore = INT_MIN;
+
+        for (size_t i = 0; i < current->degree; i++) {
+            board_vertex *move = current->neighbors[i];
+            board_vertex *original = g->robbers.positions[robber_index];
+
+            g->robbers.positions[robber_index] = move;
+            int score = minimax(g, robber_index, depth - 1, alpha, beta, 0);
+            g->robbers.positions[robber_index] = original;
+
+            if (score > bestScore)
+                bestScore = score;
+            if (score > alpha)
+                alpha = score;
+            if (beta <= alpha)
+                break;
+        }
+
+        return bestScore;
+    } else {
+        // Simule les gendarmes (simplement aller vers le voleur)
+        bestScore = INT_MAX;
+
+        for (size_t i = 0; i < g->cops.size; i++) {
+            if (g->cops.positions[i] == NULL)
+                continue;
+
+            board_vertex *cop_current = g->cops.positions[i];
+
+            for (size_t j = 0; j < cop_current->degree; j++) {
+                board_vertex *move = cop_current->neighbors[j];
+                board_vertex *original = g->cops.positions[i];
+
+                g->cops.positions[i] = move;
+                int score = minimax(g, robber_index, depth - 1, alpha, beta, 1);
+                g->cops.positions[i] = original;
+
+                if (score < bestScore)
+                    bestScore = score;
+                if (score < beta)
+                    beta = score;
+                if (beta <= alpha)
+                    break;
+            }
+        }
+
+        return bestScore;
+    }
+}
+
+size_t compute_next_position_cops(game *self, size_t index) {
+    int meilleur_score = 0;
+    size_t prochaine_case = index;
+
+    board_vertex *actuelle = self->b.vertices[index];
+    for (size_t i = 0; i < actuelle->degree; i++) {
+        board_vertex *voisine = actuelle->neighbors[i];
+        int score = 0;
+
+        for (size_t j = 0; j < self->robbers.size; j++) {
+            if (self->robbers.positions[j] == NULL)
+                continue;
+
+            int dist_actuelle = board_dist(&self->b, index, self->robbers.positions[j]->index);
+            int dist_voisine = board_dist(&self->b, voisine->index, self->robbers.positions[j]->index);
+
+            score += (dist_actuelle - dist_voisine) * 10;
+
+            if (dist_voisine <= 2)
+                score += 50;
+        }
+
+        score += voisine->degree * 2;
+
+        if (score > meilleur_score) {
+            meilleur_score = score;
+            prochaine_case = voisine->index;
+        }
+    }
+
+    return prochaine_case;
 }
 
 
-unsigned compute_next_position_robbers (game * self, size_t index)
-{
-  unsigned best_index = index;
-  int best_score = INT_MIN;
+unsigned compute_next_position_robbers(game *g, size_t index) {
+    unsigned best_move = index;
+    int best_score = INT_MIN;
 
-  board_vertex *current = self->b.vertices[index];
+    board_vertex *current = g->b.vertices[index];
+    for (size_t i = 0; i < current->degree; i++) {
+        board_vertex *move = current->neighbors[i];
 
-  for (size_t i = 0; i < current->degree; i++)
-    {
-      board_vertex *neighbor = current->neighbors[i];
-      int score = 0;
-      int min_dist = INT_MAX;
-      int total_dist = 0;
+        board_vertex *original = g->robbers.positions[0];
+        g->robbers.positions[0] = move;
 
-      for (size_t j = 0; j < self->cops.size; j++)
-        {
-          if (self->cops.positions[j] == NULL)
-            continue;
-          int dist =
-            board_dist (&self->b, neighbor->index,
-                        self->cops.positions[j]->index);
-          if (dist < min_dist)
-            min_dist = dist;
-          total_dist += dist;
-        }
+        int score = minimax(g, 0, 3, INT_MIN, INT_MAX, 0); // profondeur 3
 
-      // Maximiser la distance minimum ET moyenne
-      score += min_dist * 10 + total_dist;
+        g->robbers.positions[0] = original;
 
-      // Bonus si le sommet a peu de voisins = potentiellement une cachette
-      if (neighbor->degree <= 2)
-        score += 15;
-
-      if (score > best_score)
-        {
-          best_score = score;
-          best_index = neighbor->index;
+        if (score > best_score) {
+            best_score = score;
+            best_move = move->index;
         }
     }
 
-  return best_index;
+    return best_move;
 }
 
 /*
