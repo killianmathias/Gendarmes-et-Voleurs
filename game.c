@@ -301,69 +301,83 @@ unsigned place_robbers (game * self)
 
 }
 
-size_t compute_next_position_cops(game *self, size_t index) {
-    size_t best_index = index;
-    int best_score = INT_MIN;
+size_t compute_next_position_cops (game * self, size_t index)
+{
+  size_t best_index = index;
+  int best_score = INT_MIN;
 
-    board_vertex *current = self->b.vertices[index];
+  board_vertex *current = self->b.vertices[index];
 
-    // Collecte des sommets accessibles au voleur
-    bool *reachable_by_robber = calloc(self->b.size, sizeof(bool));
-    for (size_t r = 0; r < self->robbers.size; r++) {
-        board_vertex *robber_pos = self->robbers.positions[r];
-        for (size_t i = 0; i < robber_pos->degree; i++) {
-            reachable_by_robber[robber_pos->neighbors[i]->index] = true;
+  // Collecte des sommets accessibles au voleur
+  bool *reachable_by_robber = calloc (self->b.size, sizeof (bool));
+  for (size_t r = 0; r < self->robbers.size; r++)
+    {
+      board_vertex *robber_pos = self->robbers.positions[r];
+      for (size_t i = 0; i < robber_pos->degree; i++)
+        {
+          reachable_by_robber[robber_pos->neighbors[i]->index] = true;
         }
-        reachable_by_robber[robber_pos->index] = true;
+      reachable_by_robber[robber_pos->index] = true;
     }
 
-    // Marque les sommets déjà contrôlés par des gendarmes
-    bool *controlled_by_cops = calloc(self->b.size, sizeof(bool));
-    for (size_t c = 0; c < self->cops.size; c++) {
-        board_vertex *cop_pos = self->cops.positions[c];
-        controlled_by_cops[cop_pos->index] = true;
-        for (size_t i = 0; i < cop_pos->degree; i++) {
-            controlled_by_cops[cop_pos->neighbors[i]->index] = true;
+  // Marque les sommets déjà contrôlés par des gendarmes
+  bool *controlled_by_cops = calloc (self->b.size, sizeof (bool));
+  for (size_t c = 0; c < self->cops.size; c++)
+    {
+      board_vertex *cop_pos = self->cops.positions[c];
+      controlled_by_cops[cop_pos->index] = true;
+      for (size_t i = 0; i < cop_pos->degree; i++)
+        {
+          controlled_by_cops[cop_pos->neighbors[i]->index] = true;
         }
     }
 
-    // Explore les voisins pour trouver le meilleur prochain mouvement
-    for (size_t i = 0; i < current->degree; i++) {
-        board_vertex *neighbor = current->neighbors[i];
-        int score = 0;
+  // Explore les voisins pour trouver le meilleur prochain mouvement
+  for (size_t i = 0; i < current->degree; i++)
+    {
+      board_vertex *neighbor = current->neighbors[i];
+      int score = 0;
 
-        // Bonus si on peut contrôler un sommet accessible au voleur non encore contrôlé
-        if (reachable_by_robber[neighbor->index] && !controlled_by_cops[neighbor->index]) {
-            score += 100;
+      // Bonus si on peut contrôler un sommet accessible au voleur non encore contrôlé
+      if (reachable_by_robber[neighbor->index]
+          && !controlled_by_cops[neighbor->index])
+        {
+          score += 100;
 
-            for (size_t j = 0; j < neighbor->degree; j++) {
-                if (reachable_by_robber[neighbor->neighbors[j]->index] &&
-                    !controlled_by_cops[neighbor->neighbors[j]->index]) {
-                    score += 10; // bonus pour chaque sommet adjacent aussi atteignable par le voleur
+          for (size_t j = 0; j < neighbor->degree; j++)
+            {
+              if (reachable_by_robber[neighbor->neighbors[j]->index] &&
+                  !controlled_by_cops[neighbor->neighbors[j]->index])
+                {
+                  score += 10;  // bonus pour chaque sommet adjacent aussi atteignable par le voleur
                 }
             }
         }
 
-        // Si pas de contrôle possible, minimiser la distance au voleur
-        int total_dist = 0;
-        for (size_t r = 0; r < self->robbers.size; r++) {
-            int dist = board_dist(&self->b, neighbor->index, self->robbers.positions[r]->index);
-            total_dist += dist;
+      // Si pas de contrôle possible, minimiser la distance au voleur
+      int total_dist = 0;
+      for (size_t r = 0; r < self->robbers.size; r++)
+        {
+          int dist =
+            board_dist (&self->b, neighbor->index,
+                        self->robbers.positions[r]->index);
+          total_dist += dist;
         }
-        score -= total_dist; // pénalité proportionnelle à la distance
+      score -= total_dist;      // pénalité proportionnelle à la distance
 
-        // Bonus léger pour des sommets avec haut degré
-        score += neighbor->degree * 2;
+      // Bonus léger pour des sommets avec haut degré
+      score += neighbor->degree * 2;
 
-        if (score > best_score) {
-            best_score = score;
-            best_index = neighbor->index;
+      if (score > best_score)
+        {
+          best_score = score;
+          best_index = neighbor->index;
         }
     }
 
-    free(reachable_by_robber);
-    free(controlled_by_cops);
-    return best_index;
+  free (reachable_by_robber);
+  free (controlled_by_cops);
+  return best_index;
 }
 
 
@@ -385,9 +399,8 @@ unsigned compute_next_position_robbers (game * self, size_t index)
         {
           if (self->cops.positions[j] == NULL)
             continue;
-          int dist =
-            board_dist (&self->b, neighbor->index,
-                        self->cops.positions[j]->index);
+          int dist = board_dist (&self->b, neighbor->index,
+                                 self->cops.positions[j]->index);
           if (dist < min_dist)
             min_dist = dist;
           total_dist += dist;
