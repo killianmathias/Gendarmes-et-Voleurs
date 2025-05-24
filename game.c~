@@ -367,52 +367,34 @@ size_t compute_next_position_cops (game * self, size_t index)
         }
       return next_index;
     }
-  else
-    {
-    size_t score = INT_MAX;
+  else {
+    size_t best_score = INT_MAX;
     size_t next_index = index;
-
-    // Récupération des voisins du voleur (seul voleur)
-    board_vertex *robber_vertex = self->robbers.positions[0];
-    size_t robber_neighbors_count = robber_vertex->degree;
 
     for (size_t i = 0; i < self->b.vertices[index]->degree; i++) {
         size_t candidate = self->b.vertices[index]->neighbors[i]->index;
 
-        // Distance au voleur actuel
-        size_t dist_to_robber = board_dist(&self->b, candidate, robber_vertex->index);
-
-        // Score : on cherche à réduire la distance au voleur
-        // mais aussi à couvrir ses voisins (bloquer ses mouvements)
-        // On compte combien de voisins du voleur sont proches du candidat
-        size_t neighbors_covered = 0;
-        for (size_t j = 0; j < robber_neighbors_count; j++) {
-            size_t robber_neighbor_index = robber_vertex->neighbors[j]->index;
-            // Si le candidat est proche du voisin du voleur (distance 1 ou 2 par ex.)
-            size_t dist_to_robber_neighbor = board_dist(&self->b, candidate, robber_neighbor_index);
-            if (dist_to_robber_neighbor <= 2) {
-                neighbors_covered++;
-            }
-        }
-
-        // Calcul du score : plus le candidat est proche du voleur et
-        // plus il couvre ses voisins, plus c'est intéressant
-        // On combine avec une pondération : distance faible est mieux,
-        // nombre de voisins couverts élevé est mieux (donc on retire du score)
-        size_t candidate_score = dist_to_robber * 10 - neighbors_covered * 5;
-
-        // Vérifier que la position n'est pas déjà occupée
+        // Vérifier que le voisin n'est pas occupé par un autre gendarme
         bool already_used = false;
         for (size_t j = 0; j < self->cops.size; j++) {
-            if (candidate == self->cops.positions[j]->index) {
+            if (self->cops.positions[j] != NULL && candidate == self->cops.positions[j]->index) {
                 already_used = true;
                 break;
             }
         }
+        if (already_used)
+            continue;
 
-        // Choisir la meilleure option (score le plus faible)
-        if (!already_used && candidate_score < score) {
-            score = candidate_score;
+        // Calculer la distance du candidat au voleur
+        size_t dist = board_dist(&self->b, candidate, self->robbers.positions[0]->index);
+
+        // Si on est très proche du voleur (distance ≤ 2), favoriser ce déplacement
+        if (dist <= 2)
+            dist -= 3;  // un bonus important
+
+        // Choisir la position avec la plus petite distance (avec bonus si proche)
+        if (dist < best_score) {
+            best_score = dist;
             next_index = candidate;
         }
     }

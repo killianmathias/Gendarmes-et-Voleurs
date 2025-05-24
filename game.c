@@ -367,39 +367,47 @@ size_t compute_next_position_cops (game * self, size_t index)
         }
       return next_index;
     }
-  else {
-    size_t best_score = INT_MAX;
-    size_t next_index = index;
+  else
+    {
+      size_t best_score = INT_MAX;
+      size_t next_index = index;
 
-    for (size_t i = 0; i < self->b.vertices[index]->degree; i++) {
-        size_t candidate = self->b.vertices[index]->neighbors[i]->index;
+      for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
+        {
+          size_t candidate = self->b.vertices[index]->neighbors[i]->index;
 
-        // Vérifier que le voisin n'est pas occupé par un autre gendarme
-        bool already_used = false;
-        for (size_t j = 0; j < self->cops.size; j++) {
-            if (self->cops.positions[j] != NULL && candidate == self->cops.positions[j]->index) {
-                already_used = true;
-                break;
+          // Vérifier que le voisin n'est pas occupé par un autre gendarme
+          bool already_used = false;
+          for (size_t j = 0; j < self->cops.size; j++)
+            {
+              if (self->cops.positions[j] != NULL
+                  && candidate == self->cops.positions[j]->index)
+                {
+                  already_used = true;
+                  break;
+                }
             }
-        }
-        if (already_used)
+          if (already_used)
             continue;
 
-        // Calculer la distance du candidat au voleur
-        size_t dist = board_dist(&self->b, candidate, self->robbers.positions[0]->index);
+          // Calculer la distance du candidat au voleur
+          size_t dist =
+            board_dist (&self->b, candidate,
+                        self->robbers.positions[0]->index);
 
-        // Si on est très proche du voleur (distance ≤ 2), favoriser ce déplacement
-        if (dist <= 2)
-            dist -= 3;  // un bonus important
+          // Si on est très proche du voleur (distance ≤ 2), favoriser ce déplacement
+          if (dist <= 2)
+            dist -= 3;          // un bonus important
 
-        // Choisir la position avec la plus petite distance (avec bonus si proche)
-        if (dist < best_score) {
-            best_score = dist;
-            next_index = candidate;
+          // Choisir la position avec la plus petite distance (avec bonus si proche)
+          if (dist < best_score)
+            {
+              best_score = dist;
+              next_index = candidate;
+            }
         }
+      return next_index;
     }
-    return next_index;
-}
 }
 
 
