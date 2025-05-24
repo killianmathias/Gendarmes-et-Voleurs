@@ -420,12 +420,23 @@ size_t compute_next_position_cops (game * self, size_t index)
   size_t next_position =
     board_next (&self->b, self->cops.positions[index]->index,
                 self->robbers.positions[self->targets[index]]->index);
+  if (self->cops.positions[index]->degree == 0)
+    {
+      return self->cops.positions[index]->index;
+    }
 
   if (is_in_gamezone (self, index, next_position))
     {
       return next_position;
     }
-  return self->cops.positions[index]->index;
+  else
+    {
+      compute_targets (self, index);
+      next_position =
+        board_next (&self->b, self->cops.positions[index]->index,
+                    self->robbers.positions[self->targets[index]]->index);
+    }
+  return next_position;
 }
 
 
