@@ -280,66 +280,91 @@ size_t compute_next_position_cops (game * self, size_t index)
 
   for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
     {
-      board_vertex *neighbor = self->b.vertices[index]->neighbors[i];
-      int score = 0;
-
-      for (size_t j = 0; j < self->robbers.size; j++)
+      bool already_exists = false;
+      size_t dist = board_dist (&self->b, self->cops.positions[index]->index,
+                                self->robbers.positions[j]->index);
+      if (self->robbers.size == self->b.robbers)
         {
-          if (self->robbers.positions[j] == NULL)
-            continue;
-          int dist =
-            board_dist (&self->b, neighbor->index,
-                        self->robbers.positions[j]->index);
-          int cop_dist =
-            board_dist (&self->b, index, self->robbers.positions[j]->index);
-          score += (cop_dist - dist);
+          for (size_t i = 0; i < self->robbers.size; i++)
+            {
+              if (self->targets[i] != NULL)
+                {
+                  if (self->targets[i] == j)
+                    {
+                      already_exists = true;
+                    }
+                }
+            }
         }
-
-      if (score > best_score)
+      if (dist < max_dist && !already_exists
+          && is_in_gamezone (self, index, j))
         {
-          best_score = score;
-          next_index = neighbor->index;
+          target_index = j;
         }
     }
+  return target_index;
+}
 
-  return next_index;
+
+size_t compute_next_position_cops (game * self, size_t index)
+{
+  if (self->remaining_turn == self->b.max_turn)
+    {
+      self->targets[index] = compute_targets (self, index);
+    }
+
+  size_t current_pos = self->cops.positions[index]->index;
+  size_t target_pos = self->robbers.positions[self->targets[index]]->index;
+  size_t next_pos = board_next (&self->b, current_pos, target_pos);
+
+  // Si le mouvement reste dans la zone, on y va
+  if (is_in_gamezone (self, index, next_pos))
+    {
+      return next_pos;
+    }
+
+  // Sinon, recalculer un autre voleur dans la zone
+  self->targets[index] = compute_targets (self, index);
+  return board_next (&self->b, current_pos,
+                     self->robbers.positions[self->targets[index]]->index);
 }
 
 
 unsigned compute_next_position_robbers (game * self, size_t index)
 {
-  unsigned best_index = index;
-  int best_score = INT_MIN;
+  size_t current_pos = self->robbers.positions[index]->index;
+  board_vertex *v = self->b.vertices[current_pos];
+  size_t best_pos = current_pos;
+  int max_min_dist = -1;
 
-  for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
+  for (size_t i = 0; i < v->degree; i++)
     {
-      board_vertex *neighbor = self->b.vertices[index]->neighbors[i];
-      int min_dist = INT_MAX;
-      int score = 0;
 
-      // distance au gendarme le plus proche
+      size_t neighbor = v->neighbors[i];
+      int min_dist = INT_MAX;
+
+      // Calculer la distance minimale à tous les gendarmes
       for (size_t j = 0; j < self->cops.size; j++)
         {
-          if (self->cops.positions[j] == NULL)
-            continue;
-          int dist =
-            board_dist (&self->b, neighbor->index,
-                        self->cops.positions[j]->index);
-          if (dist < min_dist)
-            min_dist = dist;
+          if (self->cops.positions[j] != NULL)
+            {
+              int dist =
+                board_dist (&self->b, neighbor,
+                            self->cops.positions[j]->index);
+              if (dist < min_dist)
+                min_dist = dist;
+            }
         }
 
-      score += min_dist * 10;   // plus on est loin, mieux c’est
-      score += neighbor->degree;        // plus il y a de sorties, mieux c’est
-
-      if (score > best_score)
+      // Choisir le voisin avec la meilleure distance minimale
+      if (min_dist > max_min_dist)
         {
-          best_score = score;
-          best_index = neighbor->index;
+          max_min_dist = min_dist;
+          best_pos = neighbor;
         }
     }
 
-  return best_index;
+  return best_pos;
 }
 
 /*
