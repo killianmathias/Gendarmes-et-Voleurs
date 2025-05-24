@@ -334,86 +334,109 @@ unsigned place_robbers (game * self)
 //     return prochaine_case;
 // }
 
-size_t compute_next_position_cops(game *self, size_t index) {
-    if (self->robbers.size != 1) {
-        // Stratégie classique si plusieurs voleurs
-        size_t score = INT_MAX;
-        size_t next_index = index;
-        for (size_t i = 0; i < self->b.vertices[index]->degree; i++) {
-            size_t candidate = self->b.vertices[index]->neighbors[i]->index;
-            size_t new_score = board_dist(&self->b, candidate, self->robbers.positions[0]->index);
+size_t compute_next_position_cops (game * self, size_t index)
+{
+  if (self->robbers.size != 1)
+    {
+      // Stratégie classique si plusieurs voleurs
+      size_t score = INT_MAX;
+      size_t next_index = index;
+      for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
+        {
+          size_t candidate = self->b.vertices[index]->neighbors[i]->index;
+          size_t new_score =
+            board_dist (&self->b, candidate,
+                        self->robbers.positions[0]->index);
 
-            bool already_used = false;
-            for (size_t j = 0; j < self->cops.size; j++) {
-                if (candidate == self->cops.positions[j]->index) {
-                    already_used = true;
-                    break;
+          bool already_used = false;
+          for (size_t j = 0; j < self->cops.size; j++)
+            {
+              if (candidate == self->cops.positions[j]->index)
+                {
+                  already_used = true;
+                  break;
                 }
             }
 
-            if (!already_used && new_score < score) {
-                score = new_score;
-                next_index = candidate;
+          if (!already_used && new_score < score)
+            {
+              score = new_score;
+              next_index = candidate;
             }
         }
-        return next_index;
-    } else {
-        // Encerclement si un seul voleur
-        size_t voleur_pos = self->robbers.positions[0]->index;
-        board_vertex *voleur_vertex = self->b.vertices[voleur_pos];
+      return next_index;
+    }
+  else
+    {
+      // Encerclement si un seul voleur
+      size_t voleur_pos = self->robbers.positions[0]->index;
+      board_vertex *voleur_vertex = self->b.vertices[voleur_pos];
 
-        size_t voisins_count = voleur_vertex->degree;
-        size_t voisins[voisins_count];
-        for (size_t i = 0; i < voisins_count; i++) {
-            voisins[i] = voleur_vertex->neighbors[i]->index;
+      size_t voisins_count = voleur_vertex->degree;
+      size_t voisins[voisins_count];
+      for (size_t i = 0; i < voisins_count; i++)
+        {
+          voisins[i] = voleur_vertex->neighbors[i]->index;
         }
 
-        // Vérifier quels voisins sont occupés par des gendarmes
-        bool occupe_voisin[voisins_count];
-        for (size_t i = 0; i < voisins_count; i++) {
-            occupe_voisin[i] = false;
-            for (size_t j = 0; j < self->cops.size; j++) {
-                if (self->cops.positions[j] != NULL && self->cops.positions[j]->index == voisins[i]) {
-                    occupe_voisin[i] = true;
-                    break;
+      // Vérifier quels voisins sont occupés par des gendarmes
+      bool occupe_voisin[voisins_count];
+      for (size_t i = 0; i < voisins_count; i++)
+        {
+          occupe_voisin[i] = false;
+          for (size_t j = 0; j < self->cops.size; j++)
+            {
+              if (self->cops.positions[j] != NULL
+                  && self->cops.positions[j]->index == voisins[i])
+                {
+                  occupe_voisin[i] = true;
+                  break;
                 }
             }
         }
 
-        board_vertex *actuelle = self->b.vertices[index];
-        size_t best_pos = index;
-        int best_score = INT_MAX;
+      board_vertex *actuelle = self->b.vertices[index];
+      size_t best_pos = index;
+      int best_score = INT_MAX;
 
-        for (size_t i = 0; i < actuelle->degree; i++) {
-            size_t candidat = actuelle->neighbors[i]->index;
+      for (size_t i = 0; i < actuelle->degree; i++)
+        {
+          size_t candidat = actuelle->neighbors[i]->index;
 
-            bool deja_occupe = false;
-            for (size_t j = 0; j < self->cops.size; j++) {
-                if (self->cops.positions[j] != NULL && self->cops.positions[j]->index == candidat) {
-                    deja_occupe = true;
-                    break;
+          bool deja_occupe = false;
+          for (size_t j = 0; j < self->cops.size; j++)
+            {
+              if (self->cops.positions[j] != NULL
+                  && self->cops.positions[j]->index == candidat)
+                {
+                  deja_occupe = true;
+                  break;
                 }
             }
-            if (deja_occupe)
-                continue;
+          if (deja_occupe)
+            continue;
 
-            int dist_min_voisin_libre = INT_MAX;
-            for (size_t v = 0; v < voisins_count; v++) {
-                if (!occupe_voisin[v]) {
-                    int dist = board_dist(&self->b, candidat, voisins[v]);
-                    if (dist < dist_min_voisin_libre)
-                        dist_min_voisin_libre = dist;
+          int dist_min_voisin_libre = INT_MAX;
+          for (size_t v = 0; v < voisins_count; v++)
+            {
+              if (!occupe_voisin[v])
+                {
+                  int dist = board_dist (&self->b, candidat, voisins[v]);
+                  if (dist < dist_min_voisin_libre)
+                    dist_min_voisin_libre = dist;
                 }
             }
-            if (dist_min_voisin_libre == INT_MAX)
-                dist_min_voisin_libre = board_dist(&self->b, candidat, voleur_pos);
+          if (dist_min_voisin_libre == INT_MAX)
+            dist_min_voisin_libre =
+              board_dist (&self->b, candidat, voleur_pos);
 
-            if (dist_min_voisin_libre < best_score) {
-                best_score = dist_min_voisin_libre;
-                best_pos = candidat;
+          if (dist_min_voisin_libre < best_score)
+            {
+              best_score = dist_min_voisin_libre;
+              best_pos = candidat;
             }
         }
-        return best_pos;
+      return best_pos;
     }
 }
 
