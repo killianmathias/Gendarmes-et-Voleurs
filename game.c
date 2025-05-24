@@ -116,26 +116,46 @@ void compute_zones (game * self)
     {
       size_t number_of_vertices_per_zone = self->b.size / self->cops.size;
       size_t rest = self->b.size % self->b.cops;
-      
-      for (size_t i =0; i< self->cops.size; i++){
-        self->zone[i] = malloc(self->b.size * sizeof(bool));
-      }
-      
-      for (size_t j = 0; j <self->b.size;j++){
-        size_t index_cops=0;
-        size_t min = INT_MAX;
-        for (size_t i = 0; i < self->b.cops; i++)
-          {
+      size_t *nb_of_vertices = malloc (self->b.size * sizeof (size_t));
+      for (size_t i = 0; i < self->cops.size; i++)
+        {
+          self->zone[i] = malloc (self->b.size * sizeof (bool));
+          nb_of_vertices[i] = 0;
+        }
 
-            self->zone[i][j]=false;
-            if (board_dist(&self->b, self->cops.positions[i]->index,j) < min){
-              min = board_dist(&self->b, self->cops.positions[i]->index,j);
-              index_cops = i;
+
+
+      for (size_t j = 0; j < self->b.size; j++)
+        {
+          size_t index_cops = 0;
+          size_t min = INT_MAX;
+          for (size_t i = self->b.cops; i-- > 0;)
+            {
+
+              self->zone[i][j] = false;
+              if (board_dist (&self->b, self->cops.positions[i]->index, j) <
+                  min && nb_of_vertices[i] <= number_of_vertices_per_zone)
+                {
+                  min =
+                    board_dist (&self->b, self->cops.positions[i]->index, j);
+                  index_cops = i;
+
+                }
             }
-          }
-        self->zone[index_cops][j]=true;
-      }
+          self->zone[index_cops][j] = true;
+          nb_of_vertices[index_cops]++;
+        }
     }
+
+  // for (size_t i = 0; i < self->cops.size; i++)
+  //   {
+  //     printf ("Tableau de zone du gendarme %d : [", i);
+  //     for (size_t j = 0; j < self->b.size; j++)
+  //       {
+  //         printf ("%d,", self->zone[i][j]);
+  //       }
+  //     printf ("]\n");
+  //   }
 }
 
 
@@ -266,7 +286,7 @@ size_t place_cops (game * self)
               diff_max = diff;
               index = i;
             }
-          }
+        }
     }
   return index;
 }
@@ -374,7 +394,8 @@ size_t compute_targets (game * self, size_t index)
                 }
             }
         }
-      if (dist < max_dist && !already_exists)
+      if (dist < max_dist && !already_exists
+          && is_in_gamezone (self, index, j))
         {
           target_index = j;
         }
@@ -400,8 +421,7 @@ size_t compute_next_position_cops (game * self, size_t index)
     board_next (&self->b, self->cops.positions[index]->index,
                 self->robbers.positions[self->targets[index]]->index);
 
-  if (next_position >= self->zone[index][0]
-      && next_position <= self->zone[index][1])
+  if (is_in_gamezone (self, index, next_position))
     {
       return next_position;
     }
@@ -438,7 +458,7 @@ vector *game_next_position (game * self)
           else
             current->positions[i] = self->b.vertices[place_robbers (self)];
         }
-        compute_zones(self);
+      compute_zones (self);
     }
   else
     // Compute next positions
