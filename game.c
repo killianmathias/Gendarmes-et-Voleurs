@@ -334,17 +334,35 @@ unsigned place_robbers (game * self)
 //     return prochaine_case;
 // }
 
-size_t compute_next_position_cops(game * self, size_t index){
-  size_t score = 0;
+size_t compute_next_position_cops (game * self, size_t index)
+{
+  size_t score = INT_MAX;
   size_t next_index = index;
-  for (size_t i = 0; i< self->b.vertices[index];i++){
-    int new_score = board_dist(&self->b, self->b.vertices[index]->neighbors[i]->index, index) + 2* self->b.vertices[index]->neighbors[i]->degree;
-    if (score < new_score){
-      score = new_score;
-      next_index= self->b.vertices[index]->neighbors[i]->index;
+  for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
+    {
+      size_t new_score = 0;
+      new_score =
+        board_dist (&self->b,
+                    self->b.vertices[index]->neighbors[i]->index,
+                    self->robbers.positions[0]->index);
+
+
+      bool already_used = false;
+      for (size_t j = 0; j < self->cops.size; j++)
+        {
+          if (self->b.vertices[index]->neighbors[i]->index ==
+              self->cops.positions[j])
+            {
+              already_used == true;
+            }
+        }
+      if (score > new_score && !already_used)
+        {
+          score = new_score;
+          next_index = self->b.vertices[index]->neighbors[i]->index;
+        }
+      ;
     }
-    ;
-  }
   return next_index;
 }
 
