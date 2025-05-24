@@ -334,109 +334,108 @@ unsigned place_robbers (game * self)
 //     return prochaine_case;
 // }
 
-size_t compute_next_position_cops (game * self, size_t index)
-{
-  if (self->robbers.size != 1)
-    {
-      // Stratégie classique si plusieurs voleurs
-      size_t score = INT_MAX;
-      size_t next_index = index;
-      for (size_t i = 0; i < self->b.vertices[index]->degree; i++)
-        {
-          size_t candidate = self->b.vertices[index]->neighbors[i]->index;
-          size_t new_score =
-            board_dist (&self->b, candidate,
-                        self->robbers.positions[0]->index);
+size_t compute_next_position_cops(game *self, size_t index) {
+    // Si plusieurs voleurs, on suit la stratégie classique : se rapprocher du voleur le plus proche
+    if (self->robbers.size != 1) {
+        size_t best_position = index;  // Par défaut, on reste à sa place
+        int best_distance = INT_MAX;   // On cherche à minimiser la distance au voleur
 
-          bool already_used = false;
-          for (size_t j = 0; j < self->cops.size; j++)
-            {
-              if (candidate == self->cops.positions[j]->index)
-                {
-                  already_used = true;
-                  break;
+        // Parcourir tous les voisins actuels du gendarme
+        board_vertex *current_vertex = self->b.vertices[index];
+        for (size_t i = 0; i < current_vertex->degree; i++) {
+            size_t candidate = current_vertex->neighbors[i]->index;
+
+            // Calculer la distance entre ce voisin et le voleur (on prend le premier voleur)
+            int distance_to_robber = board_dist(&self->b, candidate, self->robbers.positions[0]->index);
+
+            // Vérifier que ce voisin n'est pas déjà occupé par un autre gendarme
+            bool occupied = false;
+            for (size_t j = 0; j < self->cops.size; j++) {
+                if (self->cops.positions[j]->index == candidate) {
+                    occupied = true;
+                    break;
                 }
             }
 
-          if (!already_used && new_score < score)
-            {
-              score = new_score;
-              next_index = candidate;
+            // Si ce voisin n'est pas occupé et est plus proche du voleur, on le choisit
+            if (!occupied && distance_to_robber < best_distance) {
+                best_distance = distance_to_robber;
+                best_position = candidate;
             }
         }
-      return next_index;
+
+        return best_position;
     }
-  else
-    {
-      // Encerclement si un seul voleur
-      size_t voleur_pos = self->robbers.positions[0]->index;
-      board_vertex *voleur_vertex = self->b.vertices[voleur_pos];
 
-      size_t voisins_count = voleur_vertex->degree;
-      size_t voisins[voisins_count];
-      for (size_t i = 0; i < voisins_count; i++)
-        {
-          voisins[i] = voleur_vertex->neighbors[i]->index;
+    // Si un seul voleur, on essaye de l'encercle en occupant ses voisins
+    else {
+        size_t robber_pos = self->robbers.positions[0]->index;
+        board_vertex *robber_vertex = self->b.vertices[robber_pos];
+
+        size_t neighbors_count = robber_vertex->degree;
+        size_t neighbors[neighbors_count];
+
+        // Récupérer les indices des voisins du voleur
+        for (size_t i = 0; i < neighbors_count; i++) {
+            neighbors[i] = robber_vertex->neighbors[i]->index;
         }
 
-      // Vérifier quels voisins sont occupés par des gendarmes
-      bool occupe_voisin[voisins_count];
-      for (size_t i = 0; i < voisins_count; i++)
-        {
-          occupe_voisin[i] = false;
-          for (size_t j = 0; j < self->cops.size; j++)
-            {
-              if (self->cops.positions[j] != NULL
-                  && self->cops.positions[j]->index == voisins[i])
-                {
-                  occupe_voisin[i] = true;
-                  break;
+        // Vérifier quels voisins sont déjà occupés par des gendarmes
+        bool occupied_neighbors[neighbors_count];
+        for (size_t i = 0; i < neighbors_count; i++) {
+            occupied_neighbors[i] = false;
+            for (size_t j = 0; j < self->cops.size; j++) {
+                if (self->cops.positions[j]->index == neighbors[i]) {
+                    occupied_neighbors[i] = true;
+                    break;
                 }
             }
         }
 
-      board_vertex *actuelle = self->b.vertices[index];
-      size_t best_pos = index;
-      int best_score = INT_MAX;
+        board_vertex *current_vertex = self->b.vertices[index];
+        size_t best_position = index; // Reste sur place par défaut
+        int best_score = INT_MAX;
 
-      for (size_t i = 0; i < actuelle->degree; i++)
-        {
-          size_t candidat = actuelle->neighbors[i]->index;
+        // On regarde chaque voisin du gendarme actuel
+        for (size_t i = 0; i < current_vertex->degree; i++) {
+            size_t candidate = current_vertex->neighbors[i]->index;
 
-          bool deja_occupe = false;
-          for (size_t j = 0; j < self->cops.size; j++)
-            {
-              if (self->cops.positions[j] != NULL
-                  && self->cops.positions[j]->index == candidat)
-                {
-                  deja_occupe = true;
-                  break;
+            // Vérifier si ce voisin est déjà occupé par un autre gendarme
+            bool occupied = false;
+            for (size_t j = 0; j < self->cops.size; j++) {
+                if (self->cops.positions[j]->index == candidate) {
+                    occupied = true;
+                    break;
                 }
             }
-          if (deja_occupe)
-            continue;
+            if (occupied) {
+                continue;  // On saute ce voisin s'il est occupé
+            }
 
-          int dist_min_voisin_libre = INT_MAX;
-          for (size_t v = 0; v < voisins_count; v++)
-            {
-              if (!occupe_voisin[v])
-                {
-                  int dist = board_dist (&self->b, candidat, voisins[v]);
-                  if (dist < dist_min_voisin_libre)
-                    dist_min_voisin_libre = dist;
+            // Chercher la distance minimale entre ce candidat et un voisin libre du voleur
+            int min_dist_to_free_neighbor = INT_MAX;
+            for (size_t v = 0; v < neighbors_count; v++) {
+                if (!occupied_neighbors[v]) {
+                    int dist = board_dist(&self->b, candidate, neighbors[v]);
+                    if (dist < min_dist_to_free_neighbor) {
+                        min_dist_to_free_neighbor = dist;
+                    }
                 }
             }
-          if (dist_min_voisin_libre == INT_MAX)
-            dist_min_voisin_libre =
-              board_dist (&self->b, candidat, voleur_pos);
 
-          if (dist_min_voisin_libre < best_score)
-            {
-              best_score = dist_min_voisin_libre;
-              best_pos = candidat;
+            // Si tous les voisins sont occupés, on se rapproche directement du voleur
+            if (min_dist_to_free_neighbor == INT_MAX) {
+                min_dist_to_free_neighbor = board_dist(&self->b, candidate, robber_pos);
+            }
+
+            // Choisir la position qui minimise cette distance
+            if (min_dist_to_free_neighbor < best_score) {
+                best_score = min_dist_to_free_neighbor;
+                best_position = candidate;
             }
         }
-      return best_pos;
+
+        return best_position;
     }
 }
 
