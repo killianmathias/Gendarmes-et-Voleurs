@@ -334,114 +334,119 @@ unsigned place_robbers (game * self)
 //     return prochaine_case;
 // }
 
-size_t compute_next_position_cops(game *self, size_t index) {
-  // Cas classique : plusieurs voleurs
-  if (self->robbers.size != 1) {
+size_t compute_next_position_cops(game *self, size_t index)
+{
+  if (self->robbers.size != 1)
+  {
     size_t best_position = index;
     int best_distance = INT_MAX;
-    board_vertex *current = self->b.vertices[index];
 
-    for (size_t i = 0; i < current->degree; i++) {
-      size_t neighbor = current->neighbors[i]->index;
+    board_vertex *current_vertex = self->b.vertices[index];
+    for (size_t i = 0; i < current_vertex->degree; i++)
+    {
+      size_t candidate = current_vertex->neighbors[i]->index;
+      int distance_to_robber = board_dist(&self->b, candidate, self->robbers.positions[0]->index);
 
       bool occupied = false;
-      for (size_t j = 0; j < self->cops.size; j++) {
-        if (self->cops.positions[j]->index == neighbor) {
+      for (size_t j = 0; j < self->cops.size; j++)
+      {
+        if (self->cops.positions[j]->index == candidate)
+        {
           occupied = true;
           break;
         }
       }
 
-      if (!occupied) {
-        int d = board_dist(&self->b, neighbor, self->robbers.positions[0]->index);
-        if (d < best_distance) {
-          best_distance = d;
-          best_position = neighbor;
-        }
+      if (!occupied && distance_to_robber < best_distance)
+      {
+        best_distance = distance_to_robber;
+        best_position = candidate;
       }
     }
 
     return best_position;
   }
+  else
+  {
+    size_t robber_pos = self->robbers.positions[0]->index;
+    board_vertex *robber_vertex = self->b.vertices[robber_pos];
 
-  // Cas renforcé : 1 seul voleur
-  size_t robber_index = self->robbers.positions[0]->index;
-  board_vertex *robber_vertex = self->b.vertices[robber_index];
+    size_t neighbors_count = robber_vertex->degree;
+    size_t neighbors[neighbors_count];
 
-  size_t my_index = index;
-  board_vertex *my_vertex = self->b.vertices[my_index];
+    for (size_t i = 0; i < neighbors_count; i++)
+    {
+      neighbors[i] = robber_vertex->neighbors[i]->index;
+    }
 
-  size_t best_move = my_index;
-  int best_score = 100000; // plus petit est meilleur
-
-  for (size_t i = 0; i < robber_vertex->degree; i++) {
-    size_t neighbor = robber_vertex->neighbors[i]->index;
-
-    bool already_targeted = false;
-    for (size_t j = 0; j < self->cops.size; j++) {
-      if (self->cops.positions[j]->index == neighbor) {
-        already_targeted = true;
-        break;
+    bool occupied_neighbors[neighbors_count];
+    for (size_t i = 0; i < neighbors_count; i++)
+    {
+      occupied_neighbors[i] = false;
+      for (size_t j = 0; j < self->cops.size; j++)
+      {
+        if (self->cops.positions[j]->index == neighbors[i])
+        {
+          occupied_neighbors[i] = true;
+          break;
+        }
       }
     }
 
-    if (already_targeted)
-      continue;
+    board_vertex *current_vertex = self->b.vertices[index];
+    size_t best_position = index;
+    int best_score = INT_MAX;
 
-    for (size_t j = 0; j < my_vertex->degree; j++) {
-      size_t candidate = my_vertex->neighbors[j]->index;
+    for (size_t i = 0; i < current_vertex->degree; i++)
+    {
+      size_t candidate = current_vertex->neighbors[i]->index;
 
       bool occupied = false;
-      for (size_t k = 0; k < self->cops.size; k++) {
-        if (self->cops.positions[k]->index == candidate) {
+      for (size_t j = 0; j < self->cops.size; j++)
+      {
+        if (self->cops.positions[j]->index == candidate)
+        {
           occupied = true;
           break;
         }
       }
 
       if (occupied)
+      {
         continue;
+      }
 
-      int dist = board_dist(&self->b, candidate, neighbor);
+      int min_dist_to_free_neighbor = INT_MAX;
+      for (size_t v = 0; v < neighbors_count; v++)
+      {
+        if (!occupied_neighbors[v])
+        {
+          int dist = board_dist(&self->b, candidate, neighbors[v]);
+          if (dist < min_dist_to_free_neighbor)
+          {
+            min_dist_to_free_neighbor = dist;
+          }
+        }
+      }
 
-      if (dist < best_score) {
-        best_score = dist;
-        best_move = candidate;
+      if (min_dist_to_free_neighbor == INT_MAX)
+      {
+        min_dist_to_free_neighbor = board_dist(&self->b, candidate, robber_pos);
+      }
+
+      if (min_dist_to_free_neighbor < best_score)
+      {
+        best_score = min_dist_to_free_neighbor;
+        best_position = candidate;
       }
     }
+
+    return best_position;
   }
-
-  if (best_move != my_index)
-    return best_move;
-
-  // Sinon, aller vers le voleur directement
-  int best_distance = board_dist(&self->b, my_index, robber_index);
-
-  for (size_t i = 0; i < my_vertex->degree; i++) {
-    size_t candidate = my_vertex->neighbors[i]->index;
-
-    bool occupied = false;
-    for (size_t j = 0; j < self->cops.size; j++) {
-      if (self->cops.positions[j]->index == candidate) {
-        occupied = true;
-        break;
-      }
-    }
-
-    if (!occupied) {
-      int dist = board_dist(&self->b, candidate, robber_index);
-      if (dist < best_distance) {
-        best_distance = dist;
-        best_move = candidate;
-      }
-    }
-  }
-
-  return best_move;
 }
 
 
-unsigned compute_next_position_robbers (game * self, size_t index)
+unsigned compute_next_position_robbers(game *self, size_t index)
 {
   unsigned best_index = index;
   int best_score = INT_MIN;
@@ -453,48 +458,50 @@ unsigned compute_next_position_robbers (game * self, size_t index)
 
   candidates[0] = current;
   for (size_t i = 0; i < current->degree; i++)
-    {
-      candidates[i + 1] = current->neighbors[i];
-    }
+  {
+    candidates[i + 1] = current->neighbors[i];
+  }
 
   for (size_t c = 0; c < candidates_count; c++)
+  {
+    board_vertex *pos = candidates[c];
+
+    int min_dist_to_cop = INT_MAX;
+    int total_dist_to_cops = 0;
+
+    for (size_t j = 0; j < self->cops.size; j++)
     {
-      board_vertex *pos = candidates[c];
+      if (self->cops.positions[j] == NULL)
+        continue;
 
-      int min_dist_to_cop = INT_MAX;
-      int total_dist_to_cops = 0;
+      int dist = board_dist(&self->b, pos->index, self->cops.positions[j]->index);
 
-      for (size_t j = 0; j < self->cops.size; j++)
-        {
-          if (self->cops.positions[j] == NULL)
-            continue;
-          int dist =
-            board_dist (&self->b, pos->index, self->cops.positions[j]->index);
-          if (dist < min_dist_to_cop)
-            min_dist_to_cop = dist;
-          total_dist_to_cops += dist;
-        }
+      if (dist < min_dist_to_cop)
+        min_dist_to_cop = dist;
 
-      int score = min_dist_to_cop * 12 + total_dist_to_cops;
-
-      if (pos->degree > 2)
-        score += 10;
-
-      if (pos->degree >= 4)
-        score += 5;
-
-      if (pos->index == index)
-        score += 8;
-
-      if (min_dist_to_cop < 2)
-        score -= 25;
-
-      if (score > best_score)
-        {
-          best_score = score;
-          best_index = pos->index;
-        }
+      total_dist_to_cops += dist;
     }
+
+    int score = min_dist_to_cop * 12 + total_dist_to_cops;
+
+    if (pos->degree <= 2)
+      score += 10;
+
+    if (pos->degree >= 4)
+      score += 5;
+
+    if (pos->index == index)
+      score += 8;
+
+    if (min_dist_to_cop < 2)
+      score -= 25;
+
+    if (score > best_score)
+    {
+      best_score = score;
+      best_index = pos->index;
+    }
+  }
 
   return best_index;
 }
