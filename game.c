@@ -338,33 +338,52 @@ size_t compute_next_position_cops(game *self, size_t index)
 {
   if (self->robbers.size != 1)
   {
-    size_t best_position = index;
-    int best_distance = INT_MAX;
+     board_vertex *cop_vertex = self->b.vertices[self->cops.positions[index]->index];
+  size_t best_position = cop_vertex->index;
+  int best_score = INT_MIN;
 
-    board_vertex *current_vertex = self->b.vertices[index];
-    for (size_t i = 0; i < current_vertex->degree; i++)
+  for (size_t i = 0; i < cop_vertex->degree; i++)
+  {
+    board_vertex *neighbor = cop_vertex->neighbors[i];
+    bool occupied = false;
+
+    // Éviter les collisions avec d'autres gendarmes
+    for (size_t j = 0; j < self->cops.size; j++)
     {
-      size_t candidate = current_vertex->neighbors[i]->index;
-      int distance_to_robber = board_dist(&self->b, candidate, self->robbers.positions[0]->index);
-
-      bool occupied = false;
-      for (size_t j = 0; j < self->cops.size; j++)
+      if (j != index && self->cops.positions[j]->index == neighbor->index)
       {
-        if (self->cops.positions[j]->index == candidate)
-        {
-          occupied = true;
-          break;
-        }
-      }
-
-      if (!occupied && distance_to_robber < best_distance)
-      {
-        best_distance = distance_to_robber;
-        best_position = candidate;
+        occupied = true;
+        break;
       }
     }
 
-    return best_position;
+    if (occupied)
+      continue;
+
+    int score = 0;
+
+    // Se rapprocher du voleur le plus proche
+    int min_dist = INT_MAX;
+    for (size_t r = 0; r < self->robbers.size; r++)
+    {
+      int d = board_dist(&self->b, neighbor->index, self->robbers.positions[r]->index);
+      if (d < min_dist)
+        min_dist = d;
+    }
+
+    score -= min_dist * 10; // plus la distance est faible, mieux c’est
+
+    // Bonus pour les sommets centraux (possibilité de pivoter facilement)
+    score += neighbor->degree * 2;
+
+    if (score > best_score)
+    {
+      best_score = score;
+      best_position = neighbor->index;
+    }
+  }
+
+  return best_position;
   }
   else
   {
