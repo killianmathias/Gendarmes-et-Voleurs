@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+
 typedef struct
 {
   board_vertex **positions;
@@ -51,6 +52,7 @@ typedef struct
   vector robbers;
   size_t remaining_turn;
   enum role r;
+  bool strategy;
 } game;
 
 void game_create (game * self)
@@ -62,6 +64,7 @@ void game_create (game * self)
   vector_create (&(self->robbers));
   self->remaining_turn = 0;
   self->r = COPS;
+  self->strategy=false;
 }
 
 void game_destroy (game * self)
@@ -99,41 +102,6 @@ void game_update_position (game * self, size_t *new)
     }
 }
 
-// void echanger(int* a, int* b){
-//   int temp = *a;
-//   *a = *b;
-//   *b = temp;
-// }
-
-// int partition (int tableau[], int bas, int haut){
-//   int pivot = tableau[haut];
-//   int i = bas -1;
-
-//   for (int j = bas; j<haut;j++){
-//     if (tableau[j]>pivot){
-//       i++;
-//       echanger(&tableau[i],&tableau[j]);
-//     }
-//   }
-//   echanger(&tableau[i+1],&tableau[haut]);
-//   return i + 1;
-// }
-
-// void triRapide(int tableau[],int bas, int haut){
-//   if (bas <haut){
-//     int indicePivot = partition(tableau,bas,haut);
-//     triRapide(tableau,bas,indicePivot-1);
-//     triRapide(tableau,indicePivot+1,haut);
-//   }
-// }
-// size_t place_cops(game * self){
-//   size_t degrees = malloc(self->b.size * sizeof(size_t));
-//   for(size_t i = 0; i < self->b.size; i++){
-//     degrees[i]=self->b.vertices[i]->degree;
-//   }
-//   triRapide(degrees,0,self->b.size-1);
-
-// }
 
 size_t place_cops (game * self)
 {
@@ -302,77 +270,50 @@ unsigned place_robbers (game * self)
 }
 
 // size_t compute_next_position_cops(game *self, size_t index) {
-//     int meilleur_score = 0;
-//     size_t prochaine_case = index;
-
-//     board_vertex *actuelle = self->b.vertices[index];
-//     for (size_t i = 0; i < actuelle->degree; i++) {
-//         board_vertex *voisine = actuelle->neighbors[i];
-//         int score = 0;
-
-//         for (size_t j = 0; j < self->robbers.size; j++) {
-//             if (self->robbers.positions[j] == NULL)
-//                 continue;
-
-//             int dist_actuelle = board_dist(&self->b, index, self->robbers.positions[j]->index);
-//             int dist_voisine = board_dist(&self->b, voisine->index, self->robbers.positions[j]->index);
-
-//             score += (dist_actuelle - dist_voisine) * 10;
-
-//             if (dist_voisine <= 2)
-//                 score += 50;
-//         }
-
-//         score += voisine->degree * 2;
-
-//         if (score > meilleur_score) {
-//             meilleur_score = score;
-//             prochaine_case = voisine->index;
-//         }
-//     }
-
-//     return prochaine_case;
+//     
 // }
 
-size_t compute_next_position_cops (game * self, size_t index)
+size_t compute_next_position_cops (game * self, size_t index, bool strategy)
 {
   // Si plusieurs voleurs, on suit la stratégie classique : se rapprocher du voleur le plus proche
-  if (self->robbers.size != 1)
-    {
-      size_t best_position = index;     // Par défaut, on reste à sa place
-      int best_distance = INT_MAX;      // On cherche à minimiser la distance au voleur
+  if (strategy){
+    if (self->robbers.size != 1)
+      {
+        size_t best_position = index;     // Par défaut, on reste à sa place
+        int best_distance = INT_MAX;      // On cherche à minimiser la distance au voleur
 
-      // Parcourir tous les voisins actuels du gendarme
-      board_vertex *current_vertex = self->b.vertices[index];
-      for (size_t i = 0; i < current_vertex->degree; i++)
-        {
-          size_t candidate = current_vertex->neighbors[i]->index;
+        // Parcourir tous les voisins actuels du gendarme
+        board_vertex *current_vertex = self->b.vertices[index];
+        for (size_t i = 0; i < current_vertex->degree; i++)
+          {
+            size_t candidate = current_vertex->neighbors[i]->index;
 
-          // Calculer la distance entre ce voisin et le voleur (on prend le premier voleur)
-          int distance_to_robber = board_dist (&self->b, candidate,
-                                               self->robbers.
-                                               positions[0]->index);
+            // Calculer la distance entre ce voisin et le voleur (on prend le premier voleur)
+            int distance_to_robber = board_dist (&self->b, candidate,
+                                                self->robbers.
+                                                positions[0]->index);
 
-          // Vérifier que ce voisin n'est pas déjà occupé par un autre gendarme
-          bool occupied = false;
-          for (size_t j = 0; j < self->cops.size; j++)
-            {
-              if (self->cops.positions[j]->index == candidate)
-                {
-                  occupied = true;
-                  break;
-                }
-            }
+            // Vérifier que ce voisin n'est pas déjà occupé par un autre gendarme
+            bool occupied = false;
+            for (size_t j = 0; j < self->cops.size; j++)
+              {
+                if (self->cops.positions[j]->index == candidate)
+                  {
+                    occupied = true;
+                    break;
+                  }
+              }
 
-          // Si ce voisin n'est pas occupé et est plus proche du voleur, on le choisit
-          if (!occupied && distance_to_robber < best_distance)
-            {
-              best_distance = distance_to_robber;
-              best_position = candidate;
-            }
-        }
+            // Si ce voisin n'est pas occupé et est plus proche du voleur, on le choisit
+            if (!occupied && distance_to_robber < best_distance)
+              {
+                best_distance = distance_to_robber;
+                best_position = candidate;
+              }
+          }
 
-      return best_position;
+        return best_position;
+      
     }
 
   // Si un seul voleur, on essaye de l'encercle en occupant ses voisins
@@ -453,6 +394,38 @@ size_t compute_next_position_cops (game * self, size_t index)
 
       return best_position;
     }
+  }else{
+    int meilleur_score = 0;
+    size_t prochaine_case = index;
+
+    board_vertex *actuelle = self->b.vertices[index];
+    for (size_t i = 0; i < actuelle->degree; i++) {
+        board_vertex *voisine = actuelle->neighbors[i];
+        int score = 0;
+
+        for (size_t j = 0; j < self->robbers.size; j++) {
+            if (self->robbers.positions[j] == NULL)
+                continue;
+
+            int dist_actuelle = board_dist(&self->b, index, self->robbers.positions[j]->index);
+            int dist_voisine = board_dist(&self->b, voisine->index, self->robbers.positions[j]->index);
+
+            score += (dist_actuelle - dist_voisine) * 10;
+
+            if (dist_voisine <= 2)
+                score += 50;
+        }
+
+        score += voisine->degree * 2;
+
+        if (score > meilleur_score) {
+            meilleur_score = score;
+            prochaine_case = voisine->index;
+        }
+    }
+
+    return prochaine_case;
+  }
 }
 
 
@@ -546,7 +519,7 @@ vector *game_next_position (game * self)
           {
             current->positions[i] =
               self->b.vertices[compute_next_position_cops
-                               (self, current->positions[i]->index)];
+                               (self, current->positions[i]->index,self->strategy)];
           }
         else
           {
@@ -606,7 +579,7 @@ int main (int argc, const char *argv[])
   game_create (&g);
 
   // Initialize data structures
-  if (argc != 3)
+  if (argc != 4)
     {
       fprintf (stderr,
                "Incorrect number of arguments: ./game filename 0/1\n");
@@ -629,6 +602,8 @@ int main (int argc, const char *argv[])
   g.robbers.size = g.b.robbers;
   g.r = atoi (argv[2]);
   g.remaining_turn = g.b.max_turn + 2;
+
+  g.strategy =atoi(argv[3]);
 
   // Play each turn
   enum role turn = COPS;
