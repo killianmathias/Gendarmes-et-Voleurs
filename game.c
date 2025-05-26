@@ -363,7 +363,7 @@ size_t compute_next_position_cops (game * self, size_t index, bool strategy)
             }
           if (occupied)
             {
-              continue; 
+              continue;
             }
 
           int min_dist_to_free_neighbor = INT_MAX;
