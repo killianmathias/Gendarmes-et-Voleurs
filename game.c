@@ -334,134 +334,110 @@ unsigned place_robbers (game * self)
 //     return prochaine_case;
 // }
 
-size_t compute_next_position_cops (game * self, size_t index)
-{
-  // Si plusieurs voleurs, comportement classique
-  if (self->robbers.size != 1)
-    {
-      size_t best_position = index;
-      int best_distance = INT_MAX;
+size_t compute_next_position_cops(game *self, size_t index) {
+  // Cas classique : plusieurs voleurs
+  if (self->robbers.size != 1) {
+    size_t best_position = index;
+    int best_distance = INT_MAX;
+    board_vertex *current = self->b.vertices[index];
 
-      board_vertex *current_vertex = self->b.vertices[index];
-      for (size_t i = 0; i < current_vertex->degree; i++)
-        {
-          size_t candidate = current_vertex->neighbors[i]->index;
-          int distance_to_robber = board_dist (&self->b, candidate,
-                                               self->robbers.positions[0]->index);
+    for (size_t i = 0; i < current->degree; i++) {
+      size_t neighbor = current->neighbors[i]->index;
 
-          bool occupied = false;
-          for (size_t j = 0; j < self->cops.size; j++)
-            {
-              if (self->cops.positions[j]->index == candidate)
-                {
-                  occupied = true;
-                  break;
-                }
-            }
-
-          if (!occupied && distance_to_robber < best_distance)
-            {
-              best_distance = distance_to_robber;
-              best_position = candidate;
-            }
+      bool occupied = false;
+      for (size_t j = 0; j < self->cops.size; j++) {
+        if (self->cops.positions[j]->index == neighbor) {
+          occupied = true;
+          break;
         }
+      }
 
-      return best_position;
+      if (!occupied) {
+        int d = board_dist(&self->b, neighbor, self->robbers.positions[0]->index);
+        if (d < best_distance) {
+          best_distance = d;
+          best_position = neighbor;
+        }
+      }
     }
 
-  // Si un seul voleur, essayer de l'encercle
-  else
-    {
-      size_t robber_pos = self->robbers.positions[0]->index;
-      board_vertex *robber_vertex = self->b.vertices[robber_pos];
+    return best_position;
+  }
 
-      // Chercher les voisins du voleur non occupés
-      for (size_t i = 0; i < robber_vertex->degree; i++)
-        {
-          size_t neighbor = robber_vertex->neighbors[i]->index;
+  // Cas renforcé : 1 seul voleur
+  size_t robber_index = self->robbers.positions[0]->index;
+  board_vertex *robber_vertex = self->b.vertices[robber_index];
 
-          // Vérifier si ce voisin est déjà occupé
-          bool occupied = false;
-          for (size_t j = 0; j < self->cops.size; j++)
-            {
-              if (self->cops.positions[j]->index == neighbor)
-                {
-                  occupied = true;
-                  break;
-                }
-            }
+  size_t my_index = index;
+  board_vertex *my_vertex = self->b.vertices[my_index];
 
-          // S'il n'est pas occupé, essayer de s'en rapprocher
-          if (!occupied)
-            {
-              board_vertex *current_vertex = self->b.vertices[index];
-              size_t best_position = index;
-              int best_distance = INT_MAX;
+  size_t best_move = my_index;
+  int best_score = 100000; // plus petit est meilleur
 
-              for (size_t j = 0; j < current_vertex->degree; j++)
-                {
-                  size_t candidate = current_vertex->neighbors[j]->index;
+  for (size_t i = 0; i < robber_vertex->degree; i++) {
+    size_t neighbor = robber_vertex->neighbors[i]->index;
 
-                  // Vérifier que le candidat n’est pas occupé
-                  bool candidate_occupied = false;
-                  for (size_t k = 0; k < self->cops.size; k++)
-                    {
-                      if (self->cops.positions[k]->index == candidate)
-                        {
-                          candidate_occupied = true;
-                          break;
-                        }
-                    }
-
-                  if (candidate_occupied)
-                    continue;
-
-                  int dist = board_dist(&self->b, candidate, neighbor);
-                  if (dist < best_distance)
-                    {
-                      best_distance = dist;
-                      best_position = candidate;
-                    }
-                }
-
-              // Si on a trouvé un bon candidat, on y va
-              if (best_position != index)
-                return best_position;
-            }
-        }
-
-      // Sinon, comportement par défaut : se rapprocher du voleur
-      size_t best_position = index;
-      int best_distance = board_dist(&self->b, index, robber_pos);
-
-      board_vertex *current_vertex = self->b.vertices[index];
-      for (size_t i = 0; i < current_vertex->degree; i++)
-        {
-          size_t candidate = current_vertex->neighbors[i]->index;
-
-          bool occupied = false;
-          for (size_t j = 0; j < self->cops.size; j++)
-            {
-              if (self->cops.positions[j]->index == candidate)
-                {
-                  occupied = true;
-                  break;
-                }
-            }
-
-          if (!occupied)
-            {
-              int dist = board_dist(&self->b, candidate, robber_pos);
-              if (dist < best_distance)
-                {
-                  best_distance = dist;
-                  best_position = candidate;
-                }
-            }
-        }
-
-      return best_position;
+    bool already_targeted = false;
+    for (size_t j = 0; j < self->cops.size; j++) {
+      if (self->cops.positions[j]->index == neighbor) {
+        already_targeted = true;
+        break;
+      }
     }
+
+    if (already_targeted)
+      continue;
+
+    for (size_t j = 0; j < my_vertex->degree; j++) {
+      size_t candidate = my_vertex->neighbors[j]->index;
+
+      bool occupied = false;
+      for (size_t k = 0; k < self->cops.size; k++) {
+        if (self->cops.positions[k]->index == candidate) {
+          occupied = true;
+          break;
+        }
+      }
+
+      if (occupied)
+        continue;
+
+      int dist = board_dist(&self->b, candidate, neighbor);
+
+      if (dist < best_score) {
+        best_score = dist;
+        best_move = candidate;
+      }
+    }
+  }
+
+  if (best_move != my_index)
+    return best_move;
+
+  // Sinon, aller vers le voleur directement
+  int best_distance = board_dist(&self->b, my_index, robber_index);
+
+  for (size_t i = 0; i < my_vertex->degree; i++) {
+    size_t candidate = my_vertex->neighbors[i]->index;
+
+    bool occupied = false;
+    for (size_t j = 0; j < self->cops.size; j++) {
+      if (self->cops.positions[j]->index == candidate) {
+        occupied = true;
+        break;
+      }
+    }
+
+    if (!occupied) {
+      int dist = board_dist(&self->b, candidate, robber_index);
+      if (dist < best_distance) {
+        best_distance = dist;
+        best_move = candidate;
+      }
+    }
+  }
+
+  return best_move;
 }
 
 
