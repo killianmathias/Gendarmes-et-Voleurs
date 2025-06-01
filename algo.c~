@@ -4,6 +4,10 @@
 
 void board_create (board * self)
 {
+  if (self == NULL)
+    {
+      return;
+    }
   self->size = 0;
   self->vertices = NULL;
   self->cops = 0;
@@ -18,6 +22,10 @@ void board_create (board * self)
  */
 void board_add_edge_uni (board_vertex * source, board_vertex * destination)
 {
+  if (source == NULL || destination == NULL)
+    {
+      return;
+    }
   source->degree++;
   source->neighbors =
     realloc (source->neighbors,
@@ -27,20 +35,55 @@ void board_add_edge_uni (board_vertex * source, board_vertex * destination)
 
 bool board_read_from (board * self, FILE * file)
 {
+  if (self == NULL || file == NULL)
+    {
+      return false;
+    }
   char line[128];
   if (!fgets (line, sizeof (line), file))
     return false;
 
-  sscanf (line, "Cops: %zu", &(self->cops));
+  if (sscanf (line, "Cops: %zu", &(self->cops)) != 1)
+    {
+      return false;
+    };
+  if (self->cops <= 0)
+    {
+      return false;
+    }
+  if (!fgets (line, sizeof (line), file))
+    {
+      return false;
+    }
+  if (sscanf (line, "Robbers: %zu", &(self->robbers)) != 1)
+    {
+      return false;
+    };
+  if (self->robbers <= 0)
+    {
+      return false;
+    }
   if (!fgets (line, sizeof (line), file))
     return false;
-  sscanf (line, "Robbers: %zu", &(self->robbers));
+  if (sscanf (line, "Max turn: %zu", &(self->max_turn)) != 1)
+    {
+      return false;
+    };
+  if (self->max_turn <= 0)
+    {
+      return false;
+    }
   if (!fgets (line, sizeof (line), file))
     return false;
-  sscanf (line, "Max turn: %zu", &(self->max_turn));
-  if (!fgets (line, sizeof (line), file))
-    return false;
-  sscanf (line, "Vertices: %zu", &(self->size));
+  if (sscanf (line, "Vertices: %zu", &(self->size)) != 1)
+    {
+      return false;
+    };
+  if (self->size == 0)
+    {
+      return false;
+    }
+
   self->vertices = calloc (self->size, sizeof (*self->vertices));
   for (size_t i = 0; i < self->size; i++)
     {
@@ -51,19 +94,35 @@ bool board_read_from (board * self, FILE * file)
       if (!fgets (line, sizeof (line), file))
         return false;
     }
+
   size_t edges = 0;
   if (!fgets (line, sizeof (line), file))
     return false;
-  sscanf (line, "Edges: %zu", &edges);
+  if (sscanf (line, "Edges: %zu", &edges) != 1)
+    {
+      return false;
+    };
+
   for (size_t i = 0; i < edges; i++)
     {
       size_t v1, v2;
       if (!fgets (line, sizeof (line), file))
         return false;
-      sscanf (line, "%zu %zu", &v1, &v2);
-      board_add_edge_uni (self->vertices[v1], self->vertices[v2]);
+      if (sscanf (line, "%zu %zu", &v1, &v2) != 2)
+        {
+          return false;
+        };
+      if (v1 >= self->size || v2 >= self->size)
+        {
+          return false;
+        }
+      if (v1 != v2)
+        {
+          board_add_edge_uni (self->vertices[v1], self->vertices[v2]);
+        }
       board_add_edge_uni (self->vertices[v2], self->vertices[v1]);
     }
+
   return true;
 }
 
@@ -113,7 +172,10 @@ void board_destroy (board * self)
 
 bool board_is_valid_move (board * self, size_t source, size_t dest)
 {
-
+  if (source >= self->size && dest >= self->size)
+    {
+      return false;
+    }
   for (size_t i = 0; i < self->vertices[source]->degree; i++)
     {
       if (self->vertices[source]->neighbors[i]->index == dest)
@@ -131,6 +193,10 @@ bool board_is_valid_move (board * self, size_t source, size_t dest)
 
 void board_Floyd_Warshall (board * self)
 {
+  if (self == NULL)
+    {
+      return;
+    }
   self->dist = malloc (self->size * sizeof (unsigned int *));
   self->next = malloc (self->size * sizeof (size_t *));
   for (size_t u = 0; u < self->size; u++)
@@ -140,7 +206,7 @@ void board_Floyd_Warshall (board * self)
       for (size_t v = 0; v < self->size; v++)
         {
           self->dist[u][v] = INT_MAX;
-          self->next[u][v] = 0;
+          self->next[u][v] = INT_MAX;
         }
     }
 
@@ -180,6 +246,10 @@ void board_Floyd_Warshall (board * self)
 
 size_t board_dist (board * self, size_t source, size_t dest)
 {
+  if (self == NULL || source >= self->size || dest >= self->size)
+    {
+      return 0;
+    }
   if (self->dist == NULL)
     {
       board_Floyd_Warshall (self);
@@ -189,6 +259,10 @@ size_t board_dist (board * self, size_t source, size_t dest)
 
 size_t board_next (board * self, size_t source, size_t dest)
 {
+  if (self == NULL || source >= self->size || dest >= self->size)
+    {
+      return 0;
+    }
   if (self->dist == NULL)
     {
       board_Floyd_Warshall (self);

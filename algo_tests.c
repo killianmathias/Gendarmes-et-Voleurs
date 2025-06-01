@@ -22,7 +22,6 @@ static char *test_board_Floyd_Warshall_chain ()
   rewind (file);
 
   bool read = board_read_from (&b, file);
-  board_Floyd_Warshall (&b);
   mu_assert ("error, failure reading board", read == true);
   mu_assert ("error, incorrect distance", board_dist (&b, 0, 0) == 0
              && board_dist (&b, 0, 1) == 1 && board_dist (&b, 0, 2) == 2
@@ -36,10 +35,48 @@ static char *test_board_Floyd_Warshall_chain ()
   return NULL;
 }
 
+static char *test_board_read_from_invalid_cops ()
+{
+  board b;
+  board_create (&b);
+
+  char data[] = "Cops:\nRobbers: 1\nMax turn: 1\n"
+    "Vertices: 3\n0 0\n0 0\n0 0\n" "Edges: 2\n0 1\n1 2\n";
+  FILE *file = tmpfile ();
+  fputs (data, file);
+  rewind (file);
+
+  bool read = board_read_from (&b, file);
+  mu_assert ("error, failure reading board", read == false);
+  board_destroy (&b);
+
+  return NULL;
+}
+
+static char *test_board_read_from_invalid_robbers ()
+{
+  board b;
+  board_create (&b);
+
+  char data[] = "Cops:1 \nRobbers: \nMax turn: 1\n"
+    "Vertices: 3\n0 0\n0 0\n0 0\n" "Edges: 2\n0 1\n1 2\n";
+  FILE *file = tmpfile ();
+  fputs (data, file);
+  rewind (file);
+
+  bool read = board_read_from (&b, file);
+  mu_assert ("error, failure reading board", read == false);
+  board_destroy (&b);
+
+  return NULL;
+}
+
 
 
 char *(*tests_functions[]) () = {
-  test_board_Floyd_Warshall_chain
+  test_board_Floyd_Warshall_chain,
+  test_board_read_from_invalid_cops,
+  test_board_read_from_invalid_robbers
 };
 
 int main (int argc, const char *argv[])
